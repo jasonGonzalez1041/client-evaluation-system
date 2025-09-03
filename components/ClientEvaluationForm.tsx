@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { Building, Users, FileText, Target, TrendingUp, CheckCircle, Phone, Mail, User, MapPin, Globe } from 'lucide-react'
+import Image from 'next/image'
 
 // Define interfaces
 interface Contact {
@@ -131,22 +132,22 @@ export default function ClientEvaluationForm() {
                 return
             }
         }
-        
+
         setIsSubmitting(true)
-        
+
         try {
             // Simulate API call - replace with actual Supabase integration
             console.log('Form data:', data)
             console.log('Score:', totalScore, 'Percentage:', percentage)
-            
+
             // Simulate delay
             await new Promise(resolve => setTimeout(resolve, 2000))
-            
+
             alert('Evaluación guardada exitosamente!')
-            
+
             // Reset form or redirect
             // You can add navigation logic here
-            
+
         } catch (error) {
             console.error('Error saving evaluation:', error)
             alert('Error al guardar la evaluación. Por favor intente nuevamente.')
@@ -207,7 +208,7 @@ export default function ClientEvaluationForm() {
                                 </label>
                                 <input
                                     type="number"
-                                    {...register('employees', { 
+                                    {...register('employees', {
                                         valueAsNumber: true,
                                         min: { value: 1, message: 'Debe ser mayor a 0' }
                                     })}
@@ -677,11 +678,11 @@ export default function ClientEvaluationForm() {
                             <p className="text-gray-600 mb-4">
                                 Revise la información antes de enviar la evaluación. Una vez enviada, se guardará en la base de datos y podrá ser consultada posteriormente.
                             </p>
-                            
+
                             {percentage < 80 && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                                     <p className="text-yellow-800 font-medium">
-                                        ⚠️ La puntuación está por debajo del mínimo requerido del 80%. 
+                                        ⚠️ La puntuación está por debajo del mínimo requerido del 80%.
                                         Puede continuar con el registro, pero este cliente será marcado como no apto.
                                     </p>
                                 </div>
@@ -701,9 +702,26 @@ export default function ClientEvaluationForm() {
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-                        <h1 className="text-3xl font-bold">Sistema de Evaluación de Clientes</h1>
-                        <p className="text-blue-100">Account Planning & Client Assessment</p>
+                        <div className="flex items-center gap-4">
+                            {/* Logo a la izquierda */}
+                            <div className="flex-shrink-0 pl-24">
+                                <Image
+                                    src="/AlphaLogo.png" // Ruta a tu logo en la carpeta public
+                                    alt="Logo de la empresa"
+                                    width={64}
+                                    height={64}
+                                    className="rounded-full bg-white"
+                                />
+                            </div>
+
+                            {/* Texto a la derecha */}
+                            <div className="flex-1">
+                                <h1 className="text-3xl font-bold">Sistema de Evaluación de Clientes</h1>
+                                <p className="text-blue-100">Account Planning & Client Assessment</p>
+                            </div>
+                        </div>
                     </div>
+
 
                     {/* Progress Bar */}
                     <div className="p-6 border-b border-gray-200">
