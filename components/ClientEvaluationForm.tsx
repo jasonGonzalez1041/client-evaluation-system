@@ -704,7 +704,7 @@ export default function ClientEvaluationForm() {
                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
                         <div className="flex items-center gap-4">
                             {/* Logo a la izquierda */}
-                            <div className="flex-shrink-0 pl-24">
+                            <div className="flex-shrink-0">
                                 <Image
                                     src="/AlphaLogo.png" // Ruta a tu logo en la carpeta public
                                     alt="Logo de la empresa"
