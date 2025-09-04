@@ -5,43 +5,65 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { Building, Users, FileText, Target, TrendingUp, CheckCircle, Phone, Mail, User, MapPin, Globe } from 'lucide-react'
 import Image from 'next/image'
 
-// Define interfaces
+// Importa o define los tipos de Prisma aquí
+// Si tienes los tipos generados por Prisma, importa así:
+// import { ContactType, EvaluationStatus } from '@prisma/client'
+
+// Si no, define los enums manualmente basándote en tu schema:
+enum ContactType {
+    direcciones = 'direcciones',
+    consejo = 'consejo',
+    comite = 'comite',
+    otros = 'otros'
+}
+
+enum EvaluationStatus {
+    SUITABLE = 'SUITABLE',
+    POTENTIAL = 'POTENTIAL',
+    NOT_SUITABLE = 'NOT_SUITABLE'
+}
+
+// Interfaces basadas en tu modelo de Prisma
 interface Contact {
-    contact_type: string
-    position?: string
-    name?: string
-    phone?: string
-    extension?: string
+    contact_type: ContactType
+    position?: string | null
+    name?: string | null
+    phone?: string | null
+    extension?: string | null
+    email?: string | null
 }
 
 interface ClientFormData {
     company_name: string
-    legal_id?: string
-    employees?: number
-    geographic_location?: string
-    website?: string
-    phone?: string
-    email?: string
-    mission?: string
-    vision?: string
-    organizational_values?: string
+    legal_id?: string | null
+    employees?: number | null
+    geographic_location?: string | null
+    website?: string | null
+    phone?: string | null
+    email?: string | null
+    mission?: string | null
+    vision?: string | null
+    organizational_values?: string | null
     contacts: Contact[]
-    niche?: string
-    services?: string
-    opportunities?: string
-    budget?: string
-    authority?: string
-    buyer?: string
-    needs?: string
-    timeline?: string
-    metrics?: string
-    decision_criteria?: string
-    decision_process?: string
-    pain_points?: string
-    champion?: string
-    objectives?: string
-    consequences?: string
-    // Checklist items
+
+    // Campos de negocio
+    niche?: string | null
+    services?: string | null
+    opportunities?: string | null
+    budget?: string | null
+    authority?: string | null
+    buyer?: string | null
+    needs?: string | null
+    timeline?: string | null
+    metrics?: string | null
+    decision_criteria?: string | null
+    decision_process?: string | null
+    pain_points?: string | null
+    champion?: string | null
+    objectives?: string | null
+    consequences?: string | null
+
+    // Checklist items (todos son boolean con default false según tu schema)
     has_website: boolean
     has_phone: boolean
     has_email: boolean
@@ -56,24 +78,27 @@ interface ClientFormData {
     has_timeline_urgency: boolean
     has_previous_tech_investments: boolean
     has_internal_champion: boolean
+
+    notes?: string | null
+    evaluated_by?: string | null
 }
 
-// Checklist items with their points
+// Checklist items con sus puntos
 const checklistItems = [
-    { key: 'has_website', label: 'Tiene sitio web corporativo', points: 10 },
-    { key: 'has_phone', label: 'Cuenta con línea telefónica empresarial', points: 5 },
-    { key: 'has_email', label: 'Posee correo electrónico corporativo', points: 5 },
-    { key: 'has_more_than_50_employees', label: 'Más de 50 empleados', points: 15 },
-    { key: 'has_established_brand', label: 'Marca establecida en el mercado', points: 10 },
-    { key: 'has_digital_presence', label: 'Presencia digital activa', points: 10 },
-    { key: 'has_growth_potential', label: 'Potencial de crecimiento', points: 15 },
-    { key: 'has_decision_maker_access', label: 'Acceso a tomadores de decisión', points: 15 },
-    { key: 'has_budget_authority', label: 'Autoridad presupuestaria identificada', points: 10 },
-    { key: 'has_clear_pain_points', label: 'Puntos de dolor claramente definidos', points: 15 },
-    { key: 'has_defined_needs', label: 'Necesidades específicas identificadas', points: 10 },
-    { key: 'has_timeline_urgency', label: 'Timeline definido con urgencia', points: 10 },
-    { key: 'has_previous_tech_investments', label: 'Historial de inversiones en tecnología', points: 5 },
-    { key: 'has_internal_champion', label: 'Champion interno identificado', points: 5 },
+    { key: 'has_website' as keyof ClientFormData, label: 'Tiene sitio web corporativo', points: 10 },
+    { key: 'has_phone' as keyof ClientFormData, label: 'Cuenta con línea telefónica empresarial', points: 5 },
+    { key: 'has_email' as keyof ClientFormData, label: 'Posee correo electrónico corporativo', points: 5 },
+    { key: 'has_more_than_50_employees' as keyof ClientFormData, label: 'Más de 50 empleados', points: 15 },
+    { key: 'has_established_brand' as keyof ClientFormData, label: 'Marca establecida en el mercado', points: 10 },
+    { key: 'has_digital_presence' as keyof ClientFormData, label: 'Presencia digital activa', points: 10 },
+    { key: 'has_growth_potential' as keyof ClientFormData, label: 'Potencial de crecimiento', points: 15 },
+    { key: 'has_decision_maker_access' as keyof ClientFormData, label: 'Acceso a tomadores de decisión', points: 15 },
+    { key: 'has_budget_authority' as keyof ClientFormData, label: 'Autoridad presupuestaria identificada', points: 10 },
+    { key: 'has_clear_pain_points' as keyof ClientFormData, label: 'Puntos de dolor claramente definidos', points: 15 },
+    { key: 'has_defined_needs' as keyof ClientFormData, label: 'Necesidades específicas identificadas', points: 10 },
+    { key: 'has_timeline_urgency' as keyof ClientFormData, label: 'Timeline definido con urgencia', points: 10 },
+    { key: 'has_previous_tech_investments' as keyof ClientFormData, label: 'Historial de inversiones en tecnología', points: 5 },
+    { key: 'has_internal_champion' as keyof ClientFormData, label: 'Champion interno identificado', points: 5 },
 ]
 
 export default function ClientEvaluationForm() {
@@ -85,7 +110,39 @@ export default function ClientEvaluationForm() {
     const { register, handleSubmit, watch, control, setValue, formState: { errors } } = useForm<ClientFormData>({
         defaultValues: {
             company_name: '',
-            contacts: [{ contact_type: 'direcciones' }],
+            legal_id: null,
+            employees: null,
+            geographic_location: null,
+            website: null,
+            phone: null,
+            email: null,
+            mission: null,
+            vision: null,
+            organizational_values: null,
+            contacts: [{
+                contact_type: ContactType.direcciones,
+                position: null,
+                name: null,
+                phone: null,
+                extension: null,
+                email: null
+            }],
+            niche: null,
+            services: null,
+            opportunities: null,
+            budget: null,
+            authority: null,
+            buyer: null,
+            needs: null,
+            timeline: null,
+            metrics: null,
+            decision_criteria: null,
+            decision_process: null,
+            pain_points: null,
+            champion: null,
+            objectives: null,
+            consequences: null,
+            // Todos los checklist items empiezan en false según tu schema
             has_website: false,
             has_phone: false,
             has_email: false,
@@ -100,6 +157,8 @@ export default function ClientEvaluationForm() {
             has_timeline_urgency: false,
             has_previous_tech_investments: false,
             has_internal_champion: false,
+            notes: null,
+            evaluated_by: null,
         }
     })
 
@@ -108,13 +167,13 @@ export default function ClientEvaluationForm() {
         name: 'contacts'
     })
 
-    // Calculate score in real time
+    // Calcular puntuación en tiempo real
     useEffect(() => {
         const subscription = watch((value) => {
             let score = 0
 
             checklistItems.forEach(item => {
-                if (value[item.key as keyof ClientFormData]) {
+                if (value[item.key]) {
                     score += item.points
                 }
             })
@@ -126,9 +185,23 @@ export default function ClientEvaluationForm() {
         return () => subscription.unsubscribe()
     }, [watch])
 
+    // Función para determinar el status de evaluación
+    const getEvaluationStatus = (percentage: number): EvaluationStatus => {
+        if (percentage >= 80) return EvaluationStatus.SUITABLE
+        if (percentage >= 60) return EvaluationStatus.POTENTIAL
+        return EvaluationStatus.NOT_SUITABLE
+    }
+
     const onSubmit = async (data: ClientFormData) => {
-        if (percentage < 80) {
-            if (!confirm(`La puntuación es de solo ${percentage}%, que está por debajo del mínimo requerido del 80%. ¿Está seguro de que desea continuar con el registro?`)) {
+        const currentPercentage = percentage
+        const evaluationStatus = getEvaluationStatus(currentPercentage)
+
+        // Advertencia si está por debajo del mínimo
+        if (currentPercentage < 80) {
+            const confirmMessage = `La puntuación es de solo ${currentPercentage}%, que está por debajo del mínimo recomendado del 80%. El cliente será marcado como "${evaluationStatus === EvaluationStatus.POTENTIAL ? 'Potencial' : 'No Apto'
+                }". ¿Está seguro de que desea continuar con el registro?`
+
+            if (!confirm(confirmMessage)) {
                 return
             }
         }
@@ -136,21 +209,75 @@ export default function ClientEvaluationForm() {
         setIsSubmitting(true)
 
         try {
-            // Simulate API call - replace with actual Supabase integration
-            console.log('Form data:', data)
-            console.log('Score:', totalScore, 'Percentage:', percentage)
+            // Preparar los datos para enviar con tipos correctos de Prisma
+            const payload = {
+                ...data,
+                total_score: totalScore,
+                percentage: currentPercentage,
+                evaluation_status: evaluationStatus,
+                // Asegurar que employees sea number o null
+                employees: data.employees ? Number(data.employees) : null,
+                // Filtrar valores vacíos para campos opcionales
+                legal_id: data.legal_id?.trim() || null,
+                geographic_location: data.geographic_location?.trim() || null,
+                website: data.website?.trim() || null,
+                phone: data.phone?.trim() || null,
+                email: data.email?.trim() || null,
+                mission: data.mission?.trim() || null,
+                vision: data.vision?.trim() || null,
+                organizational_values: data.organizational_values?.trim() || null,
+                niche: data.niche?.trim() || null,
+                services: data.services?.trim() || null,
+                opportunities: data.opportunities?.trim() || null,
+                budget: data.budget?.trim() || null,
+                authority: data.authority?.trim() || null,
+                buyer: data.buyer?.trim() || null,
+                needs: data.needs?.trim() || null,
+                timeline: data.timeline?.trim() || null,
+                metrics: data.metrics?.trim() || null,
+                decision_criteria: data.decision_criteria?.trim() || null,
+                decision_process: data.decision_process?.trim() || null,
+                pain_points: data.pain_points?.trim() || null,
+                champion: data.champion?.trim() || null,
+                objectives: data.objectives?.trim() || null,
+                consequences: data.consequences?.trim() || null,
+                notes: data.notes?.trim() || null,
+                evaluated_by: data.evaluated_by?.trim() || null,
+                contacts: data.contacts.map(contact => ({
+                    ...contact,
+                    position: contact.position?.trim() || null,
+                    name: contact.name?.trim() || null,
+                    phone: contact.phone?.trim() || null,
+                    extension: contact.extension?.trim() || null,
+                    email: contact.email?.trim() || null,
+                }))
+            }
 
-            // Simulate delay
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            // Llamar a la API
+            const response = await fetch('/api/clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}))
+                throw new Error(errorData.message || 'Error al guardar el cliente')
+            }
+
+            const result = await response.json()
+            console.log('Cliente creado:', result)
 
             alert('Evaluación guardada exitosamente!')
 
-            // Reset form or redirect
-            // You can add navigation logic here
+            // Opcional: Redirigir o resetear
+            window.location.reload()
 
         } catch (error) {
             console.error('Error saving evaluation:', error)
-            alert('Error al guardar la evaluación. Por favor intente nuevamente.')
+            alert(`Error al guardar la evaluación: ${error instanceof Error ? error.message : 'Error desconocido'}`)
         } finally {
             setIsSubmitting(false)
         }
@@ -343,7 +470,7 @@ export default function ClientEvaluationForm() {
                                 <div key={item.key} className="flex items-center p-4 bg-white border border-gray-200 rounded-lg">
                                     <input
                                         type="checkbox"
-                                        {...register(item.key as keyof ClientFormData)}
+                                        {...register(item.key)}
                                         className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                                     />
                                     <label className="ml-3 text-sm font-medium text-gray-700 flex-1">
@@ -383,10 +510,10 @@ export default function ClientEvaluationForm() {
                                             {...register(`contacts.${index}.contact_type` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                         >
-                                            <option value="direcciones">Direcciones/Jefaturas</option>
-                                            <option value="consejo">Consejo de Administración</option>
-                                            <option value="comite">Comité</option>
-                                            <option value="otros">Otros</option>
+                                            <option value={ContactType.direcciones}>Direcciones/Jefaturas</option>
+                                            <option value={ContactType.consejo}>Consejo de Administración</option>
+                                            <option value={ContactType.comite}>Comité</option>
+                                            <option value={ContactType.otros}>Otros</option>
                                         </select>
                                     </div>
 
@@ -426,15 +553,29 @@ export default function ClientEvaluationForm() {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Extensión
-                                    </label>
-                                    <input
-                                        {...register(`contacts.${index}.extension` as const)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                        placeholder="Número de extensión"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Extensión
+                                        </label>
+                                        <input
+                                            {...register(`contacts.${index}.extension` as const)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                            placeholder="Número de extensión"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            {...register(`contacts.${index}.email` as const)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                            placeholder="Email del contacto"
+                                        />
+                                    </div>
                                 </div>
 
                                 {index > 0 && (
@@ -451,7 +592,14 @@ export default function ClientEvaluationForm() {
 
                         <button
                             type="button"
-                            onClick={() => appendContact({ contact_type: 'direcciones' })}
+                            onClick={() => appendContact({
+                                contact_type: ContactType.direcciones,
+                                position: null,
+                                name: null,
+                                phone: null,
+                                extension: null,
+                                email: null
+                            })}
                             className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                         >
                             + Agregar Contacto
@@ -669,6 +817,9 @@ export default function ClientEvaluationForm() {
                                     <p className={`text-lg font-semibold ${getDiagnosticColor(percentage)}`}>
                                         {getDiagnostic(percentage)}
                                     </p>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Estado: {getEvaluationStatus(percentage)}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -682,11 +833,40 @@ export default function ClientEvaluationForm() {
                             {percentage < 80 && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                                     <p className="text-yellow-800 font-medium">
-                                        ⚠️ La puntuación está por debajo del mínimo requerido del 80%.
-                                        Puede continuar con el registro, pero este cliente será marcado como no apto.
+                                        ⚠️ La puntuación está por debajo del mínimo recomendado del 80%.
+                                        El cliente será marcado como {getEvaluationStatus(percentage) === EvaluationStatus.POTENTIAL ? 'Potencial' : 'No Apto'}.
                                     </p>
                                 </div>
                             )}
+
+                            {percentage >= 80 && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <p className="text-green-800 font-medium">
+                                        ✅ Excelente puntuación. Este cliente será marcado como Apto y representa una buena oportunidad de negocio.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="mt-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Notas de la Evaluación
+                            </label>
+                            <textarea
+                                {...register('notes')}
+                                rows={3}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                placeholder="Notas adicionales sobre la evaluación..."
+                            />
+                        </div>
+                        <div className="mt-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Evaluado Por
+                            </label>
+                            <input
+                                {...register('evaluated_by')}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                placeholder="ID o nombre del usuario que realizó la evaluación"
+                            />
                         </div>
                     </div>
                 )
@@ -721,7 +901,6 @@ export default function ClientEvaluationForm() {
                             </div>
                         </div>
                     </div>
-
 
                     {/* Progress Bar */}
                     <div className="p-6 border-b border-gray-200">
