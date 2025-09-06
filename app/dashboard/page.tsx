@@ -1,3 +1,4 @@
+"use client"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
@@ -9,9 +10,26 @@ import {
 } from "@/components/ui/sidebar"
 
 import data from "./data.json"
+import {useAuth} from "@/hooks/useAuth";
 
 export default function Page() {
-  return (
+        const { user, logout, isLoading } = useAuth()
+        if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+        )
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <p>No autorizado</p>
+            </div>
+        )
+    }
+    return (
     <SidebarProvider
       style={
         {
