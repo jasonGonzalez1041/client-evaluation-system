@@ -150,3 +150,73 @@ export async function POST(request: NextRequest) {
         )
     }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const pageSize = parseInt(searchParams.get('pageSize') || '5')
+    const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || 'all'
+    const sortBy = searchParams.get('sortBy') || 'created_at'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
+
+    // Construir condiciones de filtrado
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {}
+    
+    if (search) {
+      where.OR = [
+        { company_name: { contains: search, mode: 'insensitive' } },
+        { legal_id: { contains: search, mode: 'insensitive' } },
+        { geographic_location: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+    
+    if (status !== 'all') {
+      where.evaluation_status = status
+    }
+
+    // Obtener clientes
+    const clients = await prisma.client.findMany({
+      where,
+      include: {
+        contacts: {
+          take: 1,
+          orderBy: {
+            created_at: 'desc'
+          }
+        },
+        evaluations: {
+          take: 1,
+          orderBy: {
+            created_at: 'desc'
+          }
+        }
+      },
+      orderBy: {
+        [sortBy]: sortOrder
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize
+    })
+
+    // Obtener conteo total
+    const totalCount = await prisma.client.count({ where })
+
+    return NextResponse.json({
+      clients,
+      totalCount,
+      page,
+      pageSize
+    }, { status: 200 })
+
+  } catch (error) {
+    console.error('Error fetching clients:', error)
+    return NextResponse.json(
+      { message: 'Error fetching clients' },
+      { status: 500 }
+    )
+  }
+}

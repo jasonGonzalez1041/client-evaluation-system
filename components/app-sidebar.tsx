@@ -1,3 +1,4 @@
+// components/app-sidebar.tsx
 "use client"
 
 import * as React from "react"
@@ -9,11 +10,6 @@ import {
     Settings2,
     Target,
     FileText,
-    Calendar,
-    DollarSign,
-    Filter,
-    PieChart,
-    Activity,
     Brain,
 } from "lucide-react"
 
@@ -27,6 +23,7 @@ import {
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar"
+import { useNavigation } from "@/hooks/useNavigation"
 
 // Datos actualizados para el CRM
 const data = {
@@ -57,167 +54,36 @@ const data = {
             title: "Dashboard",
             url: "/dashboard",
             icon: BarChart3,
-            isActive: true,
-            items: [
-                {
-                    title: "Overview",
-                    url: "/dashboard/overview",
-                },
-                {
-                    title: "KPIs",
-                    url: "/dashboard/kpis",
-                },
-                {
-                    title: "Pipeline",
-                    url: "/dashboard/pipeline",
-                },
-            ],
         },
         {
             title: "Clientes",
             url: "/clients",
             icon: Users,
-            items: [
-                {
-                    title: "Todos los Clientes",
-                    url: "/clients/all",
-                },
-                {
-                    title: "Aptos (≥80%)",
-                    url: "/clients/suitable",
-                },
-                {
-                    title: "Potencial (60-79%)",
-                    url: "/clients/potential",
-                },
-                {
-                    title: "No Aptos (<60%)",
-                    url: "/clients/not-suitable",
-                },
-                {
-                    title: "Agregar Cliente",
-                    url: "/clients/new",
-                },
-            ],
         },
         {
             title: "Evaluaciones",
             url: "/evaluations",
             icon: Target,
-            items: [
-                {
-                    title: "Scoring Actual",
-                    url: "/evaluations/current",
-                },
-                {
-                    title: "Historial",
-                    url: "/evaluations/history",
-                },
-                {
-                    title: "BANT Analysis",
-                    url: "/evaluations/bant",
-                },
-                {
-                    title: "Pain Points",
-                    url: "/evaluations/pain-points",
-                },
-            ],
         },
         {
             title: "Contactos",
             url: "/contacts",
             icon: Contact,
-            items: [
-                {
-                    title: "Todos los Contactos",
-                    url: "/contacts/all",
-                },
-                {
-                    title: "Direcciones",
-                    url: "/contacts/direcciones",
-                },
-                {
-                    title: "Consejo",
-                    url: "/contacts/consejo",
-                },
-                {
-                    title: "Comité",
-                    url: "/contacts/comite",
-                },
-                {
-                    title: "Otros",
-                    url: "/contacts/otros",
-                },
-            ],
         },
         {
             title: "Analytics",
             url: "/analytics",
             icon: TrendingUp,
-            items: [
-                {
-                    title: "Conversión",
-                    url: "/analytics/conversion",
-                },
-                {
-                    title: "Revenue Pipeline",
-                    url: "/analytics/revenue",
-                },
-                {
-                    title: "Client Distribution",
-                    url: "/analytics/distribution",
-                },
-                {
-                    title: "Performance",
-                    url: "/analytics/performance",
-                },
-            ],
         },
         {
             title: "Reportes",
             url: "/reports",
             icon: FileText,
-            items: [
-                {
-                    title: "Reporte Mensual",
-                    url: "/reports/monthly",
-                },
-                {
-                    title: "Análisis Sectorial",
-                    url: "/reports/sector",
-                },
-                {
-                    title: "ROI Analysis",
-                    url: "/reports/roi",
-                },
-                {
-                    title: "Exportar Datos",
-                    url: "/reports/export",
-                },
-            ],
         },
         {
             title: "MCP",
             url: "/mcp",
             icon: Brain,
-            items: [
-                {
-                    title: "AI Assistant",
-                    url: "/mcp/assistant",
-                },
-                {
-                    title: "Query Builder",
-                    url: "/mcp/query-builder",
-                },
-                {
-                    title: "Data Insights",
-                    url: "/mcp/insights",
-                },
-                {
-                    title: "Natural Language",
-                    url: "/mcp/natural-language",
-                },
-            ],
         },
         {
             title: "Configuración",
@@ -246,13 +112,21 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const { isActive } = useNavigation()
+
+    // Aplicar estado activo basado en la ruta actual
+    const navItems = data.navMain.map(item => ({
+        ...item,
+        isActive: isActive(item.url, item.items)
+    }))
+
     return (
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
                 <TeamSwitcher teams={data.teams} />
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
+                <NavMain items={navItems} />
             </SidebarContent>
             <SidebarFooter>
                 <NavUser user={data.user} />

@@ -1,3 +1,4 @@
+// app\api\dashboard\route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
@@ -15,7 +16,7 @@ export async function GET() {
 
         // Obtener clientes recientes con sus contactos
         const recentClients = await prisma.client.findMany({
-            take: 10,
+            take: 5,
             orderBy: {
                 created_at: 'desc'
             },
