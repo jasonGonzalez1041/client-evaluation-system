@@ -184,13 +184,27 @@ function processMonthlyData(clients: any[]) {
         }
     })
 
-    return Object.entries(monthlyStats).map(([month, stats]) => ({
-        month,
-        suitable: stats.suitable,
-        potential: stats.potential,
-        not_suitable: stats.not_suitable,
-        total: stats.total
-    }))
+    // Convertir a array y ordenar por fecha
+    const result = Object.entries(monthlyStats)
+        .map(([month, stats]) => ({
+            month,
+            suitable: stats.suitable,
+            potential: stats.potential,
+            not_suitable: stats.not_suitable,
+            total: stats.total
+        }))
+        .sort((a, b) => {
+            // Ordenar por fecha (mes y año)
+            const [aMonth, aYear] = a.month.split(' ')
+            const [bMonth, bYear] = b.month.split(' ')
+
+            const aIndex = months.indexOf(aMonth) + (parseInt(aYear) * 12)
+            const bIndex = months.indexOf(bMonth) + (parseInt(bYear) * 12)
+
+            return aIndex - bIndex
+        })
+
+    return result
 }
 
 // Función auxiliar para obtener etiquetas de estado

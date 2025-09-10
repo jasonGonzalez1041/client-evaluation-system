@@ -77,6 +77,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const fetchDashboardData = async () => {
     try {
@@ -198,9 +199,9 @@ export default function Page() {
                 </>
               ) : dashboardData ? (
                 <>
-                  {/* Cards de estadísticas 
-                  <SectionCards />
-*/}
+                  {/* Cards de estadísticas  */}
+                  <SectionCards dashboardData={dashboardData} />
+
                   {/* Estadísticas personalizadas */}
                   <div className="px-4 lg:px-6">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -226,11 +227,11 @@ export default function Page() {
                     </div>
                   </div>
 
-                  {/* Gráfico interactivo - mantenemos el original
+                  {/* Gráfico interactivo - mantenemos el original */}
                   <div className="px-4 lg:px-6">
-                    <ChartAreaInteractive />
+                    <ChartAreaInteractive dashboardData={dashboardData} />
                   </div>
-                   */}
+
                   {/* Gráfico personalizado con datos de la API */}
                   <div className="px-4 lg:px-6">
                     <div className="rounded-lg border p-4">
@@ -243,7 +244,7 @@ export default function Page() {
                               <div className="w-24 bg-gray-200 rounded-full h-2">
                                 <div
                                   className={`h-2 rounded-full ${item.status === 'SUITABLE' ? 'bg-green-500' :
-                                      item.status === 'POTENTIAL' ? 'bg-yellow-500' : 'bg-red-500'
+                                    item.status === 'POTENTIAL' ? 'bg-yellow-500' : 'bg-red-500'
                                     }`}
                                   style={{ width: `${(item.count / dashboardData.stats.totalClients) * 100}%` }}
                                 ></div>
@@ -277,8 +278,8 @@ export default function Page() {
                             <div className="text-right">
                               <div className="font-bold text-lg">{client.percentage}%</div>
                               <div className={`text-xs px-2 py-1 rounded-full ${client.evaluation_status === 'SUITABLE' ? 'bg-green-100 text-green-800' :
-                                  client.evaluation_status === 'POTENTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
+                                client.evaluation_status === 'POTENTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
                                 }`}>
                                 {client.evaluation_status === 'SUITABLE' ? 'Apto' :
                                   client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'}
@@ -330,8 +331,8 @@ export default function Page() {
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${client.evaluation_status === 'SUITABLE' ? 'bg-green-100 text-green-800' :
-                                      client.evaluation_status === 'POTENTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-red-100 text-red-800'
+                                    client.evaluation_status === 'POTENTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
                                     }`}>
                                     {client.evaluation_status === 'SUITABLE' ? 'Apto' :
                                       client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'}
