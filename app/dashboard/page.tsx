@@ -205,11 +205,11 @@ export default function Page() {
                   <div className="px-4 lg:px-6">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                       <div className="rounded-lg border p-4">
-                        <h3 className="text-sm font-medium text-muted-foreground">Total Clientes</h3>
-                        <div className="text-2xl font-bold">{dashboardData.stats.totalClients}</div>
+                        <h3 className="text-sm font-medium text-muted-foreground">Total no aptos</h3>
+                        <div className="text-2xl font-bold">{dashboardData.stats.notSuitableClients}</div>
                       </div>
-                      <div className="rounded-lg border p-4">
-                        <h3 className="text-sm font-medium text-muted-foreground">Clientes Aptos</h3>
+                      {/* <div className="rounded-lg border p-4">
+                        <h3 className="text-sm font-medium text-muted-foreground">Leads</h3>
                         <div className="text-2xl font-bold text-green-600">{dashboardData.stats.suitableClients}</div>
                         <p className="text-xs text-muted-foreground">≥80% puntuación</p>
                       </div>
@@ -222,7 +222,7 @@ export default function Page() {
                         <h3 className="text-sm font-medium text-muted-foreground">Promedio Score</h3>
                         <div className="text-2xl font-bold">{dashboardData.stats.averageScore}%</div>
                         <p className="text-xs text-muted-foreground">{dashboardData.stats.averagePoints} puntos</p>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// app/api/evaluations/export/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
@@ -12,30 +14,28 @@ export async function GET(request: NextRequest) {
         const format = searchParams.get('format') || 'excel'
 
         // Construir condiciones de filtrado
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const where: any = {}
-
+        
         if (search) {
             where.OR = [
-                { company_name: { contains: search, mode: 'insensitive' } },
-                { legal_id: { contains: search, mode: 'insensitive' } },
-                { geographic_location: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
+                { client: { company_name: { contains: search, mode: 'insensitive' } } },
+                { client: { legal_id: { contains: search, mode: 'insensitive' } } },
+                { notes: { contains: search, mode: 'insensitive' } },
             ]
         }
-
+        
         if (status !== 'all') {
-            where.evaluation_status = status
+            where.status = status
         }
 
-        // Obtener todos los clientes (sin paginación)
-        const clients = await prisma.client.findMany({
+        // Obtener todas las evaluaciones (sin paginación)
+        const evaluations = await prisma.evaluation.findMany({
             where,
             include: {
-                contacts: {
-                    take: 1,
-                    orderBy: {
-                        created_at: 'desc'
+                client: {
+                    select: {
+                        company_name: true,
+                        legal_id: true,
                     }
                 }
             },
@@ -46,21 +46,17 @@ export async function GET(request: NextRequest) {
 
         if (format === 'excel') {
             // Formatear datos para exportación Excel
-            const exportData = clients.map(client => ({
-                'Empresa': client.company_name,
-                'ID Legal': client.legal_id || '',
-                'Ubicación': client.geographic_location || '',
-                'Teléfono': client.phone || '',
-                'Email': client.email || '',
-                'Website': client.website || '',
-                'Empleados': client.employees || '',
-                'Puntuación (%)': client.percentage,
-                'Puntos': client.total_score,
-                'Estado': client.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
-                'Contacto': client.contacts[0]?.name || '',
-                'Email Contacto': client.contacts[0]?.email || '',
-                'Fecha Creación': new Date(client.created_at).toLocaleDateString()
+            const exportData = evaluations.map(evaluation => ({
+                'Empresa': evaluation.client.company_name,
+                'ID Legal': evaluation.client.legal_id || '',
+                'Puntuación': evaluation.score,
+                'Porcentaje': `${evaluation.percentage}%`,
+                'Estado': evaluation.status === 'SUITABLE' ? 'Apto' :
+                    evaluation.status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
+                'Notas': evaluation.notes || '',
+                'Evaluado por': evaluation.evaluated_by || '',
+                'Fecha Evaluación': new Date(evaluation.created_at).toLocaleDateString(),
+                'Hora Evaluación': new Date(evaluation.created_at).toLocaleTimeString()
             }))
 
             // Implementar lógica para generar Excel
@@ -74,7 +70,7 @@ export async function GET(request: NextRequest) {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'text/csv',
-                    'Content-Disposition': 'attachment; filename=clientes.csv'
+                    'Content-Disposition': 'attachment; filename=evaluaciones.csv'
                 })
             })
         } else {
@@ -85,28 +81,28 @@ export async function GET(request: NextRequest) {
             const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
             const { width, height } = currentPage.getSize()
-            const margin = 20 // Reducir margen para más espacio
+            const margin = 20
             let yPosition = height - margin
-            const lineHeight = 12 // Reducir altura de línea
-            const smallLineHeight = 10 // Para texto más pequeño
+            const lineHeight = 12
+            const smallLineHeight = 10
 
             // Título
-            currentPage.drawText('Lista de Clientes', {
+            currentPage.drawText('Historial de Evaluaciones', {
                 x: margin,
                 y: yPosition,
-                size: 16, // Tamaño ligeramente menor
+                size: 16,
                 font: boldFont,
                 color: rgb(0, 0, 0)
             })
 
-            yPosition -= 25 // Reducir espacio después del título
+            yPosition -= 25
 
             // Información de filtros aplicados
             if (search || status !== 'all') {
                 currentPage.drawText('Filtros aplicados:', {
                     x: margin,
                     y: yPosition,
-                    size: 10, // Texto más pequeño
+                    size: 10,
                     font: boldFont,
                     color: rgb(0, 0, 0)
                 })
@@ -114,12 +110,11 @@ export async function GET(request: NextRequest) {
                 yPosition -= lineHeight
 
                 if (search) {
-                    // Truncar búsqueda si es muy larga
                     const searchText = search.length > 40 ? search.substring(0, 37) + '...' : search
                     currentPage.drawText(`Búsqueda: ${searchText}`, {
                         x: margin,
                         y: yPosition,
-                        size: 9, // Texto más pequeño
+                        size: 9,
                         font: font,
                         color: rgb(0, 0, 0)
                     })
@@ -132,19 +127,19 @@ export async function GET(request: NextRequest) {
                     currentPage.drawText(`Estado: ${statusText}`, {
                         x: margin,
                         y: yPosition,
-                        size: 9, // Texto más pequeño
+                        size: 9,
                         font: font,
                         color: rgb(0, 0, 0)
                     })
                     yPosition -= smallLineHeight
                 }
 
-                yPosition -= 8 // Espacio adicional reducido
+                yPosition -= 8
             }
 
-            // Encabezados de tabla con anchos optimizados
-            const headersPdf = ['Empresa', 'Ubicación', 'Puntuación', 'Estado', 'Contacto', 'Fecha']
-            const columnWidths = [180, 110, 60, 60, 100, 60] // Anchos optimizados
+            // Encabezados de tabla
+            const headersPdf = ['Empresa', 'Puntuación', 'Porcentaje', 'Estado', 'Fecha', 'Hora']
+            const columnWidths = [200, 70, 70, 80, 70, 60]
             let xPosition = margin
 
             // Dibujar encabezados
@@ -169,10 +164,10 @@ export async function GET(request: NextRequest) {
                 color: rgb(0, 0, 0)
             })
 
-            yPosition -= 8 // Reducir espacio después de la línea
+            yPosition -= 8
 
-            // Datos de clientes
-            for (const client of clients) {
+            // Datos de evaluaciones
+            for (const evaluation of evaluations) {
                 // Verificar si necesitamos una nueva página
                 if (yPosition < margin + 40) {
                     currentPage = pdfDoc.addPage([595.28, 841.89])
@@ -204,25 +199,20 @@ export async function GET(request: NextRequest) {
                 xPosition = margin
 
                 // Empresa (truncar si es necesario)
-                const companyName = client.company_name.length > 40
-                    ? client.company_name.substring(0, 40) + '...'
-                    : client.company_name
+                const companyName = evaluation.client.company_name.length > 35
+                    ? evaluation.client.company_name.substring(0, 35) + '...'
+                    : evaluation.client.company_name
                 currentPage.drawText(companyName, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9, // Texto más pequeño
+                    size: 9,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[0]
 
-                // Ubicación (truncar si es necesario)
-                const location = client.geographic_location
-                    ? (client.geographic_location.length > 30
-                        ? client.geographic_location.substring(0, 30) + '...'
-                        : client.geographic_location)
-                    : 'N/A'
-                currentPage.drawText(location, {
+                // Puntuación
+                currentPage.drawText(evaluation.score.toString(), {
                     x: xPosition,
                     y: yPosition,
                     size: 9,
@@ -231,8 +221,8 @@ export async function GET(request: NextRequest) {
                 })
                 xPosition += columnWidths[1]
 
-                // Puntuación
-                currentPage.drawText(`${client.percentage}%`, {
+                // Porcentaje
+                currentPage.drawText(`${evaluation.percentage}%`, {
                     x: xPosition,
                     y: yPosition,
                     size: 9,
@@ -242,8 +232,8 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[2]
 
                 // Estado
-                const statusText = client.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
+                const statusText = evaluation.status === 'SUITABLE' ? 'Apto' :
+                    evaluation.status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
                 currentPage.drawText(statusText, {
                     x: xPosition,
                     y: yPosition,
@@ -253,22 +243,8 @@ export async function GET(request: NextRequest) {
                 })
                 xPosition += columnWidths[3]
 
-                // Contacto (truncar si es necesario)
-                const contactName = client.contacts[0]?.name || 'Sin contacto'
-                const contactDisplay = contactName.length > 15
-                    ? contactName.substring(0, 12) + '...'
-                    : contactName
-                currentPage.drawText(contactDisplay, {
-                    x: xPosition,
-                    y: yPosition,
-                    size: 9,
-                    font: font,
-                    color: rgb(0, 0, 0)
-                })
-                xPosition += columnWidths[4]
-
-                // Fecha (formato más corto)
-                const date = new Date(client.created_at)
+                // Fecha
+                const date = new Date(evaluation.created_at)
                 const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear().toString().slice(-2)}`
                 currentPage.drawText(shortDate, {
                     x: xPosition,
@@ -277,30 +253,64 @@ export async function GET(request: NextRequest) {
                     font: font,
                     color: rgb(0, 0, 0)
                 })
+                xPosition += columnWidths[4]
+
+                // Hora
+                const shortTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+                currentPage.drawText(shortTime, {
+                    x: xPosition,
+                    y: yPosition,
+                    size: 9,
+                    font: font,
+                    color: rgb(0, 0, 0)
+                })
 
                 yPosition -= lineHeight
+
+                // Agregar notas si existen (en una línea adicional)
+                if (evaluation.notes) {
+                    if (yPosition < margin + 20) {
+                        currentPage = pdfDoc.addPage([595.28, 841.89])
+                        yPosition = height - margin
+                    }
+
+                    const notes = evaluation.notes.length > 80
+                        ? evaluation.notes.substring(0, 77) + '...'
+                        : evaluation.notes
+                    
+                    currentPage.drawText(`Notas: ${notes}`, {
+                        x: margin + 10,
+                        y: yPosition,
+                        size: 8,
+                        font: font,
+                        color: rgb(0.5, 0.5, 0.5)
+                    })
+                    
+                    yPosition -= smallLineHeight
+                }
+
+                // Espacio adicional entre evaluaciones
+                yPosition -= 5
             }
 
             // Guardar PDF
             const pdfBytes = await pdfDoc.save()
-
-            // Convertir Uint8Array a Buffer para NextResponse
             const pdfBuffer = Buffer.from(pdfBytes)
 
             return new NextResponse(pdfBuffer, {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'application/pdf',
-                    'Content-Disposition': 'attachment; filename=clientes.pdf',
+                    'Content-Disposition': 'attachment; filename=evaluaciones.pdf',
                     'Content-Length': pdfBuffer.length.toString()
                 })
             })
         }
 
     } catch (error) {
-        console.error('Error exporting clients:', error)
+        console.error('Error exporting evaluations:', error)
         return NextResponse.json(
-            { message: 'Error exporting clients' },
+            { message: 'Error exporting evaluations' },
             { status: 500 }
         )
     }

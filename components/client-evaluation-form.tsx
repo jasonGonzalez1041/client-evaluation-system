@@ -84,21 +84,31 @@ interface ClientFormData {
 }
 
 // Checklist items con sus puntos
+// Checklist items actualizados con todos los puntos especificados
 const checklistItems = [
-    { key: 'has_website' as keyof ClientFormData, label: 'Tiene sitio web corporativo', points: 10 },
-    { key: 'has_phone' as keyof ClientFormData, label: 'Cuenta con línea telefónica empresarial', points: 5 },
-    { key: 'has_email' as keyof ClientFormData, label: 'Posee correo electrónico corporativo', points: 5 },
-    { key: 'has_more_than_50_employees' as keyof ClientFormData, label: 'Más de 50 empleados', points: 15 },
-    { key: 'has_established_brand' as keyof ClientFormData, label: 'Marca establecida en el mercado', points: 10 },
-    { key: 'has_digital_presence' as keyof ClientFormData, label: 'Presencia digital activa', points: 10 },
-    { key: 'has_growth_potential' as keyof ClientFormData, label: 'Potencial de crecimiento', points: 15 },
-    { key: 'has_decision_maker_access' as keyof ClientFormData, label: 'Acceso a tomadores de decisión', points: 15 },
-    { key: 'has_budget_authority' as keyof ClientFormData, label: 'Autoridad presupuestaria identificada', points: 10 },
-    { key: 'has_clear_pain_points' as keyof ClientFormData, label: 'Puntos de dolor claramente definidos', points: 15 },
-    { key: 'has_defined_needs' as keyof ClientFormData, label: 'Necesidades específicas identificadas', points: 10 },
-    { key: 'has_timeline_urgency' as keyof ClientFormData, label: 'Timeline definido con urgencia', points: 10 },
-    { key: 'has_previous_tech_investments' as keyof ClientFormData, label: 'Historial de inversiones en tecnología', points: 5 },
-    { key: 'has_internal_champion' as keyof ClientFormData, label: 'Champion interno identificado', points: 5 },
+    { key: 'has_critical_mission' as keyof ClientFormData, label: 'Misión Crítica', points: 15 },
+    { key: 'has_urgency' as keyof ClientFormData, label: 'Sentido de Urgencia', points: 10 },
+    { key: 'is_manufacturer' as keyof ClientFormData, label: 'Es fabricante o manufacturero', points: 10 },
+    { key: 'has_distribution' as keyof ClientFormData, label: 'Distribución', points: 10 },
+    { key: 'has_warehouse' as keyof ClientFormData, label: 'Tiene Bodega o almacén', points: 10 },
+    { key: 'has_transportation' as keyof ClientFormData, label: 'Transporte o distribución', points: 10 },
+    { key: 'has_more_than_15_employees' as keyof ClientFormData, label: 'Cantidad de personas más de 15', points: 10 },
+    { key: 'has_fleet' as keyof ClientFormData, label: 'Tiene Flotilla', points: 10 },
+    { key: 'has_website' as keyof ClientFormData, label: 'Tiene Página WEB', points: 5 },
+    { key: 'has_phone_system' as keyof ClientFormData, label: 'Central telefónica', points: 5 },
+    { key: 'is_private_company' as keyof ClientFormData, label: 'Empresa Privada', points: 5 },
+    { key: 'is_regional' as keyof ClientFormData, label: 'Regional (Es deseable)', points: 5 },
+    { key: 'is_legal_entity' as keyof ClientFormData, label: 'Debe ser una empresa Jurídica', points: 10 },
+    { key: 'has_tech_budget' as keyof ClientFormData, label: 'Empresa con presupuesto para tecnología', points: 15 },
+    { key: 'buys_technology' as keyof ClientFormData, label: 'Compra tecnología', points: 10 },
+    { key: 'has_identified_problems' as keyof ClientFormData, label: 'Problemas/necesidades identificados', points: 15 },
+    { key: 'has_competitive_interest' as keyof ClientFormData, label: 'Tiene Interés competitivo', points: 10 },
+    { key: 'uses_social_media' as keyof ClientFormData, label: 'Usan redes sociales', points: 5 },
+    { key: 'has_economic_stability' as keyof ClientFormData, label: 'Buena posición económica', points: 10 },
+    { key: 'is_expanding' as keyof ClientFormData, label: 'Está en expansión o crecimiento', points: 10 },
+    { key: 'wants_cost_reduction' as keyof ClientFormData, label: 'Quieren reducir costos y mejorar eficiencia', points: 15 },
+    { key: 'has_geographic_location' as keyof ClientFormData, label: 'Ubicación Geográfica (accesible)', points: 5 },
+    { key: 'has_purchase_process' as keyof ClientFormData, label: 'Tiene procesos de compra establecidos', points: 10 },
 ]
 
 export default function ClientEvaluationForm() {
@@ -612,7 +622,7 @@ export default function ClientEvaluationForm() {
                     <div className="space-y-6">
                         <div className="flex items-center space-x-3 mb-6">
                             <Target className="w-6 h-6 text-blue-600" />
-                            <h2 className="text-2xl font-bold text-gray-900">Oportunidades de Negocio</h2>
+                            <h2 className="text-2xl font-bold text-gray-900">BANT (Presupuesto, Autoridad, Necesito, Línea de tiempo)</h2>
                         </div>
 
                         <div className="bg-blue-50 p-4 rounded-lg mb-6">

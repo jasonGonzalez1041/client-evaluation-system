@@ -36,18 +36,9 @@ const data = {
         {
             name: "Alpha Latam",
             logo: "/AlphaLogo.png",
-            plan: "Enterprise",
+            plan: "alphalatam.tech",
         },
-        {
-            name: "Equipo de Ventas",
-            logo: "/AlphaLogo.png",
-            plan: "Professional",
-        },
-        {
-            name: "Gerencia",
-            logo: "/AlphaLogo.png",
-            plan: "Executive",
-        },
+
     ],
     navMain: [
         {
@@ -56,7 +47,7 @@ const data = {
             icon: BarChart3,
         },
         {
-            title: "Clientes",
+            title: "Ingresos",
             url: "/clients",
             icon: Users,
         },
@@ -66,7 +57,7 @@ const data = {
             icon: Target,
         },
         {
-            title: "Contactos",
+            title: "Leads",
             url: "/contacts",
             icon: Contact,
         },
@@ -90,22 +81,6 @@ const data = {
             url: "/settings",
             icon: Settings2,
             items: [
-                {
-                    title: "General",
-                    url: "/settings/general",
-                },
-                {
-                    title: "Usuarios",
-                    url: "/settings/users",
-                },
-                {
-                    title: "Scoring Rules",
-                    url: "/settings/scoring",
-                },
-                {
-                    title: "Integrations",
-                    url: "/settings/integrations",
-                },
             ],
         },
     ],

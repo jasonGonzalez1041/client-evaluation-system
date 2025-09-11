@@ -7,7 +7,7 @@ import {
     SidebarInset,
     SidebarProvider,
 } from "@/components/ui/sidebar"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react" // Importar useCallback
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,8 @@ import {
     Search,
     ChevronDown,
     ChevronUp,
+    Eye,
+    AlertCircle,
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -44,36 +46,34 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import Link from "next/link"
 
-interface Client {
+interface Evaluation {
     id: string
-    company_name: string
-    legal_id: string | null
-    geographic_location: string | null
-    phone: string | null
-    email: string | null
-    website: string | null
-    employees: number | null
+    client_id: string
+    score: number
     percentage: number
-    total_score: number
-    evaluation_status: string
+    status: string
+    notes: string | null
+    evaluated_by: string | null
     created_at: string
-    updated_at: string
-    contacts: any[]
-    lastEvaluation?: any
+    client: {
+        id: string
+        company_name: string
+        legal_id: string | null
+    }
 }
 
-interface ClientsResponse {
-    clients: Client[]
+interface EvaluationsResponse {
+    evaluations: Evaluation[]
     totalCount: number
     page: number
     pageSize: number
 }
 
-export default function ClientsPage() {
+export default function EvaluationsPage() {
     const { user, isLoading: authLoading } = useAuth()
-    const [clients, setClients] = useState<Client[]>([])
+    const [evaluations, setEvaluations] = useState<Evaluation[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isPageChanging, setIsPageChanging] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -81,35 +81,37 @@ export default function ClientsPage() {
     const [pageSize, setPageSize] = useState(10)
     const [totalCount, setTotalCount] = useState(0)
     const [searchTerm, setSearchTerm] = useState("")
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("") // Término con debounce
     const [statusFilter, setStatusFilter] = useState<string>("all")
     const [sortField, setSortField] = useState<string>("created_at")
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
     const [isExporting, setIsExporting] = useState(false)
 
-    const fetchClients = async (isPageChange = false) => {
+    // Función para obtener evaluaciones
+    const fetchEvaluations = useCallback(async (isPageChange = false) => {
         try {
             setError(null)
             if (isPageChange) {
                 setIsPageChanging(true)
             }
-
+            
             const params = new URLSearchParams({
                 page: page.toString(),
                 pageSize: pageSize.toString(),
-                search: searchTerm,
+                search: debouncedSearchTerm, // Usar el término con debounce
                 status: statusFilter,
                 sortBy: sortField,
                 sortOrder: sortDirection
             })
 
-            const response = await fetch(`/api/clients?${params}`)
+            const response = await fetch(`/api/evaluations?${params}`)
 
             if (!response.ok) {
-                throw new Error('Error al cargar los clientes')
+                throw new Error('Error al cargar las evaluaciones')
             }
 
-            const data: ClientsResponse = await response.json()
-            setClients(data.clients)
+            const data: EvaluationsResponse = await response.json()
+            setEvaluations(data.evaluations)
             setTotalCount(data.totalCount)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -119,13 +121,26 @@ export default function ClientsPage() {
                 setIsPageChanging(false)
             }
         }
-    }
+    }, [page, pageSize, debouncedSearchTerm, statusFilter, sortField, sortDirection])
 
+    // Efecto para el debounce de búsqueda
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm)
+            setPage(1) // Reiniciar a la primera página al buscar
+        }, 500) // 500ms de debounce
+
+        return () => {
+            clearTimeout(handler)
+        }
+    }, [searchTerm])
+
+    // Efecto principal para cargar evaluaciones
     useEffect(() => {
         if (user && !authLoading) {
-            fetchClients()
+            fetchEvaluations()
         }
-    }, [user, authLoading, page, pageSize, searchTerm, statusFilter, sortField, sortDirection])
+    }, [user, authLoading, fetchEvaluations])
 
     const handleSort = (field: string) => {
         if (sortField === field) {
@@ -138,34 +153,47 @@ export default function ClientsPage() {
 
     const handlePageChange = (newPage: number) => {
         setPage(newPage);
-        fetchClients(true);
+        fetchEvaluations(true);
     };
 
     const handleExport = async (format: 'pdf' | 'excel') => {
         try {
             setIsExporting(true)
             const params = new URLSearchParams({
-                search: searchTerm,
+                search: debouncedSearchTerm, // Usar el término con debounce
                 status: statusFilter,
                 sortBy: sortField,
-                sortOrder: sortDirection
+                sortOrder: sortDirection,
+                format: format
             })
 
-            const response = await fetch(`/api/clients/export?${params}&format=${format}`)
+            const response = await fetch(`/api/evaluations/export?${params}`)
 
             if (!response.ok) {
                 throw new Error(`Error al exportar ${format}`)
             }
 
-            const blob = await response.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `clientes.${format === 'pdf' ? 'pdf' : 'xlsx'}`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
+            if (format === 'excel') {
+                const blob = await response.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'evaluaciones.csv'
+                document.body.appendChild(a)
+                a.click()
+                window.URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+            } else {
+                const blob = await response.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'evaluaciones.pdf'
+                document.body.appendChild(a)
+                a.click()
+                window.URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Error al exportar')
         } finally {
@@ -205,17 +233,17 @@ export default function ClientsPage() {
                     <div className="@container/main flex flex-1 flex-col gap-2">
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-4 lg:px-6">
-                                <h1 className="text-2xl font-bold">Listado de ingresos</h1>
+                                <h1 className="text-2xl font-bold">Historial de Evaluaciones</h1>
 
                                 <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            placeholder="Buscar clientes..."
+                                            placeholder="Buscar evaluaciones..."
                                             value={searchTerm}
                                             onChange={(e) => {
                                                 setSearchTerm(e.target.value)
-                                                setPage(1)
+                                                // No reiniciamos la página aquí, lo hace el debounce
                                             }}
                                             className="pl-8"
                                         />
@@ -232,7 +260,7 @@ export default function ClientsPage() {
                                             <Filter className="h-4 w-4 mr-2" />
                                             <SelectValue placeholder="Filtrar por estado" />
                                         </SelectTrigger>
-                                        <SelectContent >
+                                        <SelectContent>
                                             <SelectItem value="all">Todos</SelectItem>
                                             <SelectItem value="SUITABLE">Apto</SelectItem>
                                             <SelectItem value="POTENTIAL">Potencial</SelectItem>
@@ -267,7 +295,7 @@ export default function ClientsPage() {
                                         <AlertDescription>
                                             {error}
                                             <Button
-                                                onClick={() => fetchClients()}
+                                                onClick={() => fetchEvaluations()}
                                                 variant="outline"
                                                 size="sm"
                                                 className="ml-2"
@@ -297,13 +325,25 @@ export default function ClientsPage() {
                                                         )}
                                                     </div>
                                                 </TableHead>
-                                                <TableHead>Ubicación</TableHead>
+                                                <TableHead
+                                                    className="cursor-pointer hover:bg-accent"
+                                                    onClick={() => handleSort("score")}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Puntuación
+                                                        {sortField === "score" && (
+                                                            sortDirection === "asc" ?
+                                                                <ChevronUp className="h-4 w-4 ml-1" /> :
+                                                                <ChevronDown className="h-4 w-4 ml-1" />
+                                                        )}
+                                                    </div>
+                                                </TableHead>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
                                                     onClick={() => handleSort("percentage")}
                                                 >
                                                     <div className="flex items-center">
-                                                        Puntuación
+                                                        Porcentaje
                                                         {sortField === "percentage" && (
                                                             sortDirection === "asc" ?
                                                                 <ChevronUp className="h-4 w-4 ml-1" /> :
@@ -313,24 +353,24 @@ export default function ClientsPage() {
                                                 </TableHead>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
-                                                    onClick={() => handleSort("evaluation_status")}
+                                                    onClick={() => handleSort("status")}
                                                 >
                                                     <div className="flex items-center">
                                                         Estado
-                                                        {sortField === "evaluation_status" && (
+                                                        {sortField === "status" && (
                                                             sortDirection === "asc" ?
                                                                 <ChevronUp className="h-4 w-4 ml-1" /> :
                                                                 <ChevronDown className="h-4 w-4 ml-1" />
                                                         )}
                                                     </div>
                                                 </TableHead>
-                                                <TableHead>Contacto</TableHead>
+                                                <TableHead>Notas</TableHead>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
                                                     onClick={() => handleSort("created_at")}
                                                 >
                                                     <div className="flex items-center">
-                                                        Fecha Creación
+                                                        Fecha Evaluación
                                                         {sortField === "created_at" && (
                                                             sortDirection === "asc" ?
                                                                 <ChevronUp className="h-4 w-4 ml-1" /> :
@@ -338,6 +378,7 @@ export default function ClientsPage() {
                                                         )}
                                                     </div>
                                                 </TableHead>
+                                                <TableHead>Acciones</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -350,71 +391,69 @@ export default function ClientsPage() {
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                     </TableRow>
                                                 ))
-                                            ) : clients.length > 0 ? (
-                                                clients.map((client) => (
-                                                    <TableRow key={client.id}>
+                                            ) : evaluations.length > 0 ? (
+                                                evaluations.map((evaluation) => (
+                                                    <TableRow key={evaluation.id}>
                                                         <TableCell className="font-medium">
                                                             <div>
-                                                                <div>{client.company_name}</div>
-                                                                {client.legal_id && (
+                                                                <div>{evaluation.client.company_name}</div>
+                                                                {evaluation.client.legal_id && (
                                                                     <div className="text-sm text-muted-foreground">
-                                                                        {client.legal_id}
+                                                                        {evaluation.client.legal_id}
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>{client.geographic_location || "N/A"}</TableCell>
                                                         <TableCell>
-                                                            <div>
-                                                                <div className="font-medium">{client.percentage}%</div>
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {client.total_score} pts
-                                                                </div>
-                                                            </div>
+                                                            <div className="font-medium">{evaluation.score} pts</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="font-medium">{evaluation.percentage}%</div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge
                                                                 variant="outline"
                                                                 className={
-                                                                    client.evaluation_status === "SUITABLE"
+                                                                    evaluation.status === "SUITABLE"
                                                                         ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                                                        : client.evaluation_status === "POTENTIAL"
+                                                                        : evaluation.status === "POTENTIAL"
                                                                             ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
                                                                             : "bg-red-100 text-red-800 hover:bg-red-100"
                                                                 }
                                                             >
-                                                                {client.evaluation_status === "SUITABLE"
+                                                                {evaluation.status === "SUITABLE"
                                                                     ? "Apto"
-                                                                    : client.evaluation_status === "POTENTIAL"
+                                                                    : evaluation.status === "POTENTIAL"
                                                                         ? "Potencial"
                                                                         : "No Apto"}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            {client.contacts && client.contacts.length > 0 ? (
-                                                                <div>
-                                                                    <div className="font-medium">
-                                                                        {client.contacts[0].name || "Sin nombre"}
-                                                                    </div>
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {client.contacts[0].email || "Sin email"}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-muted-foreground">Sin contacto</span>
-                                                            )}
+                                                        <TableCell className="max-w-xs truncate">
+                                                            {evaluation.notes || "Sin notas"}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {new Date(client.created_at).toLocaleDateString()}
+                                                            {new Date(evaluation.created_at).toLocaleDateString()} {new Date(evaluation.created_at).toLocaleTimeString()}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Link href={`/clients/${evaluation.client_id}`}>
+                                                                <Button variant="ghost" size="sm">
+                                                                    <Eye className="h-4 w-4 mr-1" />
+                                                                    Ver Cliente
+                                                                </Button>
+                                                            </Link>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={6} className="h-24 text-center">
-                                                        No se encontraron clientes.
+                                                    <TableCell colSpan={7} className="h-24 text-center">
+                                                        {debouncedSearchTerm || statusFilter !== 'all' 
+                                                            ? "No se encontraron evaluaciones con los filtros aplicados."
+                                                            : "No se encontraron evaluaciones."
+                                                        }
                                                     </TableCell>
                                                 </TableRow>
                                             )}
@@ -425,7 +464,7 @@ export default function ClientsPage() {
                                 {/* Paginación con indicador de carga */}
                                 <div className="flex items-center justify-between space-x-6 lg:space-x-8 mt-4">
                                     <div className="flex items-center space-x-2">
-                                        <p className="text-sm font-medium">Clientes por página</p>
+                                        <p className="text-sm font-medium">Filas por página</p>
                                         <Select
                                             value={pageSize.toString()}
                                             onValueChange={(value) => {
@@ -437,7 +476,7 @@ export default function ClientsPage() {
                                                 <SelectValue placeholder={pageSize.toString()} />
                                             </SelectTrigger>
                                             <SelectContent side="top">
-                                                {[5, 10, 20].map((size) => (
+                                                {[5, 10, 20, 50].map((size) => (
                                                     <SelectItem key={size} value={size.toString()}>
                                                         {size}
                                                     </SelectItem>

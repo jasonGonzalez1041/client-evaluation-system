@@ -36,10 +36,10 @@ export function SectionCards({ dashboardData }: SectionCardsProps) {
 
   // Calcular leads calificados (aptos + potenciales)
   const qualifiedLeads = suitableClients + potentialClients
-  
+
   // Calcular tasa de conversión (leads calificados / total)
-  const conversionRate = totalClients > 0 
-    ? Math.round((qualifiedLeads / totalClients) * 100) 
+  const conversionRate = totalClients > 0
+    ? Math.round((qualifiedLeads / totalClients) * 100)
     : 0
 
   return (
@@ -68,6 +68,30 @@ export function SectionCards({ dashboardData }: SectionCardsProps) {
         </CardFooter>
       </Card>
 
+      {/* Leads no calificados */}
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription>Total de Prospectos</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {notSuitableClients}
+          </CardTitle>
+          <CardAction>
+            <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300">
+              <IconTrendingDown />
+              {notSuitableClients > 0 ? Math.round((notSuitableClients / totalClients) * 100) : 0}%
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex gap-2 font-medium">
+            No aptos para seguimiento <IconTrendingDown className="size-4" />
+          </div>
+          <div className="text-muted-foreground">
+            Requieren reevaluación
+          </div>
+        </CardFooter>
+      </Card>
+
       {/* Leads calificados */}
       <Card className="@container/card">
         <CardHeader>
@@ -92,29 +116,7 @@ export function SectionCards({ dashboardData }: SectionCardsProps) {
         </CardFooter>
       </Card>
 
-      {/* Leads no calificados */}
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Leads No Calificados</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {notSuitableClients}
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300">
-              <IconTrendingDown />
-              {notSuitableClients > 0 ? Math.round((notSuitableClients / totalClients) * 100) : 0}%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            No aptos para seguimiento <IconTrendingDown className="size-4" />
-          </div>
-          <div className="text-muted-foreground">
-            Requieren reevaluación
-          </div>
-        </CardFooter>
-      </Card>
+
 
       {/* Tasa de conversión */}
       <Card className="@container/card">
@@ -132,7 +134,7 @@ export function SectionCards({ dashboardData }: SectionCardsProps) {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            {conversionRate >= 50 ? "Buena tasa de conversión" : "Tasa de conversión a mejorar"} 
+            {conversionRate >= 50 ? "Buena tasa de conversión" : "Tasa de conversión a mejorar"}
             {conversionRate >= 50 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
           </div>
           <div className="text-muted-foreground">
