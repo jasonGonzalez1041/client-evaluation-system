@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// api/analytics/export/route.ts
-// app/api/analytics/export/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
@@ -10,7 +8,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const timeframe = searchParams.get('timeframe') || '30d'
 
-        // Calcular fechas según el timeframe (misma lógica que en analytics/route.ts)
+        // Calcular fechas según el timeframe
         const now = new Date()
         let startDate = new Date()
 
@@ -34,7 +32,7 @@ export async function GET(request: NextRequest) {
                 startDate.setDate(now.getDate() - 30)
         }
 
-        // Obtener datos para analytics (similar a analytics/route.ts)
+        // Obtener datos para analytics
         const where: any = {
             created_at: {
                 gte: startDate
@@ -184,8 +182,9 @@ export async function GET(request: NextRequest) {
 
         yPosition -= lineHeight
 
-        const suitableCompanies = evaluationStats.find(s => s.evaluation_status === 'SUITABLE')?._count || 0
-        const potentialCompanies = evaluationStats.find(s => s.evaluation_status === 'POTENTIAL')?._count || 0
+        // CORRECCIÓN: Asegurarse de acceder a _count.id
+        const suitableCompanies = evaluationStats.find(s => s.evaluation_status === 'SUITABLE')?._count.id || 0
+        const potentialCompanies = evaluationStats.find(s => s.evaluation_status === 'POTENTIAL')?._count.id || 0
         const totalCompanies = evaluationStats.reduce((acc, curr) => acc + curr._count.id, 0)
 
         currentPage.drawText(`Empresas Aptas: ${suitableCompanies}`, {
@@ -235,8 +234,11 @@ export async function GET(request: NextRequest) {
             yPosition -= lineHeight
 
             leadsByType.forEach((item) => {
+                // CORRECCIÓN: Usar item._count.id en lugar de item._count
                 const percentage = totalLeads > 0 ? (item._count.id / totalLeads * 100).toFixed(1) : '0'
-                currentPage.drawText(`${item.lead_type}: ${item._count.id} (${percentage}%)`, {
+                const leadType = item.lead_type || 'Sin tipo'
+
+                currentPage.drawText(`${leadType}: ${item._count.id} (${percentage}%)`, {
                     x: margin,
                     y: yPosition,
                     size: 12,
@@ -272,7 +274,8 @@ export async function GET(request: NextRequest) {
                 const statusText = item.evaluation_status === 'SUITABLE' ? 'Aptas' :
                     item.evaluation_status === 'POTENTIAL' ? 'Potenciales' : 'No Aptas'
 
-                currentPage.drawText(`${statusText}: ${item._count} (${percentage}%)`, {
+                // CORRECCIÓN: Usar item._count.id en lugar de item._count
+                currentPage.drawText(`${statusText}: ${item._count.id} (${percentage}%)`, {
                     x: margin,
                     y: yPosition,
                     size: 12,
