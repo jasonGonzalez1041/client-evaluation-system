@@ -1,41 +1,82 @@
-// app\api\dashboard\route.ts
+// app/api/dashboard/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Tipos para MiniCRM
+interface CompanyWithLeads {
+    id: string
+    company_name: string
+    legal_id: string | null
+    geographic_location: string | null
+    phone: string | null
+    email: string | null
+    website: string | null
+    employees: number | null
+    percentage: number
+    total_score: number
+    evaluation_status: string
+    notes: string | null
+    evaluated_by: string | null
+    evaluated_at: Date | null
+    created_at: Date
+    updated_at: Date
+    leads: Array<{
+        id: string
+        lead_type: string
+        position: string | null
+        name: string | null
+        phone: string | null
+        extension: string | null
+        email: string | null
+    }>
+}
+
+interface MonthlyCompany {
+    created_at: Date
+    evaluation_status: string
+    total_score: number
+}
+
 export async function GET() {
     try {
-        // Obtener estadísticas generales
-        const totalClients = await prisma.client.count()
+        // Obtener estadísticas generales de empresas
+        const totalCompanies = await prisma.company.count()
 
-        const clientsByStatus = await prisma.client.groupBy({
+        const companiesByStatus = await prisma.company.groupBy({
             by: ['evaluation_status'],
             _count: {
                 id: true
             }
         })
 
-        // Obtener clientes recientes con sus contactos
-        const recentClients = await prisma.client.findMany({
+        // Obtener empresas recientes con sus leads
+        const recentCompanies = await prisma.company.findMany({
             take: 5,
             orderBy: {
                 created_at: 'desc'
             },
             include: {
-                contacts: true,
-                evaluations: {
-                    take: 1,
-                    orderBy: {
-                        created_at: 'desc'
+                leads: {
+                    select: {
+                        id: true,
+                        lead_type: true,
+                        position: true,
+                        name: true,
+                        phone: true,
+                        extension: true,
+                        email: true
                     }
                 }
             }
-        })
+        }) as CompanyWithLeads[]
 
         // Estadísticas por mes (últimos 6 meses)
         const sixMonthsAgo = new Date()
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+        sixMonthsAgo.setDate(1) // Primer día del mes
+        sixMonthsAgo.setHours(0, 0, 0, 0)
 
-        const clientsPerMonth = await prisma.client.findMany({
+        const companiesPerMonth = await prisma.company.findMany({
             where: {
                 created_at: {
                     gte: sixMonthsAgo
@@ -49,10 +90,10 @@ export async function GET() {
         })
 
         // Procesar datos para gráficos
-        const monthlyData = processMonthlyData(clientsPerMonth)
+        const monthlyData = processMonthlyData(companiesPerMonth)
 
         // Estadísticas de scores
-        const scoreStats = await prisma.client.aggregate({
+        const scoreStats = await prisma.company.aggregate({
             _avg: {
                 percentage: true,
                 total_score: true
@@ -67,8 +108,8 @@ export async function GET() {
             }
         })
 
-        // Top clientes por puntuación
-        const topClients = await prisma.client.findMany({
+        // Top empresas por puntuación
+        const topCompanies = await prisma.company.findMany({
             take: 5,
             orderBy: {
                 percentage: 'desc'
@@ -84,7 +125,7 @@ export async function GET() {
         })
 
         // Distribución por ubicación geográfica
-        const locationStats = await prisma.client.groupBy({
+        const locationStats = await prisma.company.groupBy({
             by: ['geographic_location'],
             _count: {
                 id: true
@@ -96,19 +137,24 @@ export async function GET() {
             }
         })
 
+        // Calcular conteos por estado
+        const suitableCount = companiesByStatus.find(s => s.evaluation_status === 'SUITABLE')?._count.id || 0
+        const potentialCount = companiesByStatus.find(s => s.evaluation_status === 'POTENTIAL')?._count.id || 0
+        const notSuitableCount = companiesByStatus.find(s => s.evaluation_status === 'NOT_SUITABLE')?._count.id || 0
+
         // Preparar respuesta del dashboard
         const dashboardData = {
             stats: {
-                totalClients,
-                suitableClients: clientsByStatus.find(s => s.evaluation_status === 'SUITABLE')?._count.id || 0,
-                potentialClients: clientsByStatus.find(s => s.evaluation_status === 'POTENTIAL')?._count.id || 0,
-                notSuitableClients: clientsByStatus.find(s => s.evaluation_status === 'NOT_SUITABLE')?._count.id || 0,
+                totalCompanies,
+                suitableCompanies: suitableCount,
+                potentialCompanies: potentialCount,
+                notSuitableCompanies: notSuitableCount,
                 averageScore: Math.round(scoreStats._avg.percentage || 0),
                 averagePoints: Math.round(scoreStats._avg.total_score || 0)
             },
             charts: {
-                monthlyClients: monthlyData,
-                statusDistribution: clientsByStatus.map(item => ({
+                monthlyCompanies: monthlyData,
+                statusDistribution: companiesByStatus.map(item => ({
                     status: item.evaluation_status,
                     count: item._count.id,
                     label: getStatusLabel(item.evaluation_status)
@@ -118,24 +164,26 @@ export async function GET() {
                     count: item._count.id
                 }))
             },
-            recentClients: recentClients.map(client => ({
-                id: client.id,
-                company_name: client.company_name,
-                legal_id: client.legal_id,
-                geographic_location: client.geographic_location,
-                phone: client.phone,
-                email: client.email,
-                website: client.website,
-                employees: client.employees,
-                percentage: client.percentage,
-                total_score: client.total_score,
-                evaluation_status: client.evaluation_status,
-                created_at: client.created_at,
-                updated_at: client.updated_at,
-                primaryContact: client.contacts.find(c => c.contact_type === 'direcciones') || client.contacts[0] || null,
-                lastEvaluation: client.evaluations[0] || null
+            recentCompanies: recentCompanies.map(company => ({
+                id: company.id,
+                company_name: company.company_name,
+                legal_id: company.legal_id,
+                geographic_location: company.geographic_location,
+                phone: company.phone,
+                email: company.email,
+                website: company.website,
+                employees: company.employees,
+                percentage: company.percentage,
+                total_score: company.total_score,
+                evaluation_status: company.evaluation_status,
+                notes: company.notes,
+                evaluated_by: company.evaluated_by,
+                evaluated_at: company.evaluated_at,
+                created_at: company.created_at,
+                updated_at: company.updated_at,
+                primaryLead: company.leads?.find(l => l.lead_type === 'direcciones') || company.leads?.[0] || null
             })),
-            topClients
+            topCompanies
         }
 
         return NextResponse.json(dashboardData, { status: 200 })
@@ -149,37 +197,36 @@ export async function GET() {
     }
 }
 
-// Función auxiliar para procesar datos mensuales
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function processMonthlyData(clients: any[]) {
+function processMonthlyData(companies: MonthlyCompany[]) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const monthlyStats: { [key: string]: { suitable: number, potential: number, not_suitable: number, total: number } } = {}
+    const monthlyStats: { [key: string]: { qualified: number, warm: number, cold: number, total: number } } = {}
 
     // Inicializar los últimos 6 meses
+    const currentDate = new Date()
     for (let i = 5; i >= 0; i--) {
-        const date = new Date()
+        const date = new Date(currentDate)
         date.setMonth(date.getMonth() - i)
         const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`
-        monthlyStats[monthKey] = { suitable: 0, potential: 0, not_suitable: 0, total: 0 }
+        monthlyStats[monthKey] = { qualified: 0, warm: 0, cold: 0, total: 0 }
     }
 
-    // Contar clientes por mes y estado
-    clients.forEach(client => {
-        const date = new Date(client.created_at)
+    // Contar empresas por mes y estado
+    companies.forEach(company => {
+        const date = new Date(company.created_at)
         const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`
 
         if (monthlyStats[monthKey]) {
             monthlyStats[monthKey].total++
 
-            switch (client.evaluation_status) {
+            switch (company.evaluation_status) {
                 case 'SUITABLE':
-                    monthlyStats[monthKey].suitable++
+                    monthlyStats[monthKey].qualified++
                     break
                 case 'POTENTIAL':
-                    monthlyStats[monthKey].potential++
+                    monthlyStats[monthKey].warm++
                     break
                 case 'NOT_SUITABLE':
-                    monthlyStats[monthKey].not_suitable++
+                    monthlyStats[monthKey].cold++
                     break
             }
         }
@@ -189,9 +236,9 @@ function processMonthlyData(clients: any[]) {
     const result = Object.entries(monthlyStats)
         .map(([month, stats]) => ({
             month,
-            suitable: stats.suitable,
-            potential: stats.potential,
-            not_suitable: stats.not_suitable,
+            qualified: stats.qualified,
+            warm: stats.warm,
+            cold: stats.cold,
             total: stats.total
         }))
         .sort((a, b) => {
@@ -208,15 +255,15 @@ function processMonthlyData(clients: any[]) {
     return result
 }
 
-// Función auxiliar para obtener etiquetas de estado
+// Función auxiliar para obtener etiquetas de estado (terminología CRM)
 function getStatusLabel(status: string) {
     switch (status) {
         case 'SUITABLE':
-            return 'Apto'
+            return 'Lead Calificado'
         case 'POTENTIAL':
-            return 'Potencial'
+            return 'Lead Tibio'
         case 'NOT_SUITABLE':
-            return 'No Apto'
+            return 'Lead Descartado'
         default:
             return status
     }

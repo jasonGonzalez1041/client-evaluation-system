@@ -1,138 +1,112 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Modelo para usuarios administradores
 model AdminUser {
   id         String    @id @default(uuid())
   username   String    @unique
   password   String
-  email      String?   @unique
   first_name String?
   last_name  String?
+  email      String?   @unique
   is_active  Boolean   @default(true)
   last_login DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@index([username])
-  @@map("AdminUser")
+  @@map("admin_users")
 }
 
-// Modelo principal para los clientes
-model Client {
-  id                    String  @id @default(uuid())
-  company_name          String
-  legal_id              String? @unique
-  employees             Int?
-  geographic_location   String?
-  website               String?
-  phone                 String?
-  email                 String?
-  mission               String? @db.Text
-  vision                String? @db.Text
-  organizational_values String? @db.Text
-
-  // Campos de negocio
-  niche             String?
-  services          String? @db.Text
-  opportunities     String? @db.Text
-  budget            String?
-  authority         String?
-  buyer             String?
-  needs             String? @db.Text
-  timeline          String?
-  metrics           String? @db.Text
-  decision_criteria String?
-  decision_process  String? @db.Text
-  pain_points       String? @db.Text
-  champion          String?
-  objectives        String? @db.Text
-  consequences      String? @db.Text
-
-  // Checklist items
-  has_website                   Boolean @default(false)
-  has_phone                     Boolean @default(false)
-  has_email                     Boolean @default(false)
-  has_more_than_50_employees    Boolean @default(false)
-  has_established_brand         Boolean @default(false)
-  has_digital_presence          Boolean @default(false)
-  has_growth_potential          Boolean @default(false)
-  has_decision_maker_access     Boolean @default(false)
-  has_budget_authority          Boolean @default(false)
-  has_clear_pain_points         Boolean @default(false)
-  has_defined_needs             Boolean @default(false)
-  has_timeline_urgency          Boolean @default(false)
-  has_previous_tech_investments Boolean @default(false)
-  has_internal_champion         Boolean @default(false)
-
-  // Puntuación
-  total_score       Int              @default(0)
-  percentage        Int              @default(0)
-  evaluation_status EvaluationStatus @default(NOT_SUITABLE)
-
-  // Metadatos
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relaciones
-  contacts    Contact[]
-  evaluations Evaluation[]
+model Company {
+  id                          String           @id @default(uuid())
+  company_name                String
+  legal_id                    String?
+  employees                   Int?
+  geographic_location         String?
+  website                     String?
+  phone                       String?
+  email                       String?
+  mission                     String?
+  vision                      String?
+  organizational_values       String?
+  has_critical_mission        Boolean          @default(false)
+  has_urgency                 Boolean          @default(false)
+  is_manufacturer             Boolean          @default(false)
+  has_distribution            Boolean          @default(false)
+  has_warehouse               Boolean          @default(false)
+  has_transportation          Boolean          @default(false)
+  has_more_than_15_employees  Boolean          @default(false)
+  has_fleet                   Boolean          @default(false)
+  has_website_check           Boolean          @default(false)
+  has_phone_system            Boolean          @default(false)
+  is_private_company          Boolean          @default(false)
+  is_regional                 Boolean          @default(false)
+  is_legal_entity             Boolean          @default(false)
+  has_tech_budget             Boolean          @default(false)
+  buys_technology             Boolean          @default(false)
+  has_identified_problems     Boolean          @default(false)
+  has_competitive_interest    Boolean          @default(false)
+  uses_social_media           Boolean          @default(false)
+  has_economic_stability      Boolean          @default(false)
+  is_expanding                Boolean          @default(false)
+  wants_cost_reduction        Boolean          @default(false)
+  has_geographic_location_acc Boolean          @default(false)
+  has_purchase_process        Boolean          @default(false)
+  niche                       String?
+  services                    String?
+  opportunities               String?
+  budget                      String?
+  authority                   String?
+  buyer                       String?
+  needs                       String?
+  timeline                    String?
+  metrics                     String?
+  decision_criteria           String?
+  decision_process            String?
+  pain_points                 String?
+  champion                    String?
+  objectives                  String?
+  consequences                String?
+  total_score                 Int              @default(0)
+  percentage                  Int              @default(0)
+  evaluation_status           EvaluationStatus @default(NOT_SUITABLE)
+  notes                       String?
+  evaluated_by                String?
+  evaluated_at                DateTime?
+  created_at                  DateTime         @default(now())
+  updated_at                  DateTime         @updatedAt
+  leads                       Lead[]
 
   @@index([company_name])
   @@index([evaluation_status])
+  @@index([created_at])
+  @@index([evaluated_at])
+  @@map("companies")
 }
 
-// Modelo para los contactos
-model Contact {
-  id           String      @id @default(uuid())
-  client_id    String
-  contact_type ContactType
-  position     String?
-  name         String?
-  phone        String?
-  extension    String?
-  email        String?
-
+model Lead {
+  id         String   @id @default(uuid())
+  company_id String
+  lead_type  LeadType
+  position   String?
+  name       String?
+  phone      String?
+  extension  String?
+  email      String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+  company    Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
 
-  // Relación
-  client Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
-
-  @@index([client_id])
+  @@index([company_id])
+  @@map("leads")
 }
 
-// Modelo para historial de evaluaciones
-model Evaluation {
-  id           String           @id @default(uuid())
-  client_id    String
-  score        Int
-  percentage   Int
-  status       EvaluationStatus
-  notes        String?          @db.Text
-  evaluated_by String? // ID del usuario que hizo la evaluación
-
-  created_at DateTime @default(now())
-
-  // Relación
-  client Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
-
-  @@index([client_id])
-  @@index([created_at])
-}
-
-// Enums
-enum ContactType {
+enum LeadType {
   direcciones
   consejo
   comite
@@ -140,7 +114,7 @@ enum ContactType {
 }
 
 enum EvaluationStatus {
-  SUITABLE // Apto (≥80%)
-  POTENTIAL // Potencial (60-79%)
-  NOT_SUITABLE // No Apto (<60%)
+  SUITABLE
+  POTENTIAL
+  NOT_SUITABLE
 }

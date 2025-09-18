@@ -47,6 +47,11 @@ const data = {
             icon: BarChart3,
         },
         {
+            title: "Formulario",
+            url: "/form",
+            icon: FileText,
+        },
+        {
             title: "Ingresos",
             url: "/clients",
             icon: Users,
@@ -69,7 +74,7 @@ const data = {
         {
             title: "Reportes",
             url: "/reports",
-            icon: FileText,
+            icon: BarChart3,
         },
         {
             title: "MCP",

@@ -1,8 +1,62 @@
-'use client'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
 
-import { useState, useEffect } from 'react'
+import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header"
+import {
+    SidebarInset,
+    SidebarProvider,
+} from "@/components/ui/sidebar"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    Filter,
+    Search,
+    ChevronDown,
+    ChevronUp,
+    Building,
+    Users,
+    FileText,
+    Target,
+    TrendingUp,
+    CheckCircle,
+    Phone,
+    Mail,
+    User,
+    MapPin,
+    Globe,
+} from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import { useForm, useFieldArray } from 'react-hook-form'
-import { Building, Users, FileText, Target, TrendingUp, CheckCircle, Phone, Mail, User, MapPin, Globe } from 'lucide-react'
 import Image from 'next/image'
 
 // Importa o define los tipos de Prisma aquí
@@ -111,7 +165,8 @@ const checklistItems = [
     { key: 'has_purchase_process' as keyof ClientFormData, label: 'Tiene procesos de compra establecidos', points: 10 },
 ]
 
-export default function ClientEvaluationForm() {
+// Componente del formulario
+function ClientEvaluationForm() {
     const [currentStep, setCurrentStep] = useState(1)
     const [totalScore, setTotalScore] = useState(0)
     const [percentage, setPercentage] = useState(0)
@@ -897,7 +952,7 @@ export default function ClientEvaluationForm() {
                             <div className="flex-shrink-0">
                                 <Image
                                     src="/AlphaLogo.png" // Ruta a tu logo en la carpeta public
-                                    alt="Logo de la empresa"
+                                    alt="Logo de Alpha Latam"
                                     width={64}
                                     height={64}
                                     className="rounded-full bg-white"
@@ -963,5 +1018,47 @@ export default function ClientEvaluationForm() {
                 </div>
             </div>
         </div>
+    )
+}
+
+// Página principal que renderiza el formulario dentro del layout del sistema
+export default function FormPage() {
+    const { user, isLoading: authLoading } = useAuth()
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+        )
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <p>No autorizado</p>
+            </div>
+        )
+    }
+
+    return (
+        <SidebarProvider
+            style={{
+                "--sidebar-width": "calc(var(--spacing) * 72)",
+                "--header-height": "calc(var(--spacing) * 12)",
+            } as React.CSSProperties}
+        >
+            <AppSidebar variant="inset" />
+            <SidebarInset>
+                <SiteHeader />
+                <div className="flex flex-1 flex-col">
+                    <div className="@container/main flex flex-1 flex-col gap-2">
+                        <div className="flex flex-col gap-4 md:gap-6">
+                            <ClientEvaluationForm />
+                        </div>
+                    </div>
+                </div>
+            </SidebarInset>
+        </SidebarProvider>
     )
 }

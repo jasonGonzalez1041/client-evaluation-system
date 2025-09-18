@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  alpha_crm_db:
+    image: postgres:17-alpine
+    container_name: Alpha_CRM_DB
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alpha_crm_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}  # Valor por defecto para desarrollo
+      POSTGRES_DB: alpha_crm_db
+      TZ: America/Costa_Rica
+      PGTZ: America/Costa_Rica
+    ports:
+      - "3001:5432"  # Puerto 3001 en el host, 5432 en el contenedor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./init-scripts:/docker-entrypoint-initdb.d  # Para scripts de inicialización
+    networks:
+      - alpha_crm_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alpha_crm_admin -d alpha_crm_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  alpha_crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production  # Especificar la etapa
+    container_name: Alpha_CRM
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://alpha_crm_admin:${POSTGRES_PASSWORD:-SecurePassword123!}@alpha_crm_db:5432/alpha_crm_db
+      - NODE_ENV=production
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-here}
+      - TZ=America/Costa_Rica
+    depends_on:
+      alpha_crm_db:
+        condition: service_healthy
+    networks:
+      - alpha_crm_network
+    volumes:
+      - ./uploads:/app/uploads
+      # Para desarrollo, puedes montar el código fuente (comentado por defecto)
+      # - .:/app
+      # - /app/node_modules
+      # - /app/.next
+
+volumes:
+  postgres_data:
+    driver: local
+    name: alpha_crm_postgres_data
+
+networks:
+  alpha_crm_network:
+    driver: bridge
+    name: alpha_crm_network

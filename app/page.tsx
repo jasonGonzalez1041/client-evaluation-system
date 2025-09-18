@@ -1,8 +1,7 @@
-import Link from 'next/link'
-import ClientEvaluationForm from '@/components/client-evaluation-form'
+import DashboardPage from "./dashboard/page";
 
 export default function Home() {
   return (
-    <ClientEvaluationForm />
+    <DashboardPage />
   )
 }

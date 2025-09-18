@@ -17,9 +17,9 @@ import Image from "next/image"
 import { toast } from "sonner"
 
 export function LoginForm({
-                              className,
-                              ...props
-                          }: React.ComponentProps<"div">) {
+    className,
+    ...props
+}: React.ComponentProps<"div">) {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -30,7 +30,7 @@ export function LoginForm({
         setIsLoading(true)
 
         try {
-            // Llamar a tu API route en lugar de Supabase directamente
+            // Llamar a tu API de login
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {

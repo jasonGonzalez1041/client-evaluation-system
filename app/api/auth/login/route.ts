@@ -8,84 +8,123 @@ export async function POST(request: NextRequest) {
     try {
         const { username, password } = await request.json()
 
+        // Validación de entrada
         if (!username || !password) {
             return NextResponse.json(
                 { error: 'Username and password are required' },
                 { status: 400 }
             )
         }
-        console.log('Buscar usuario en la base de datos:', username)
+
+        // Validación de tipos y longitud
+        if (typeof username !== 'string' || typeof password !== 'string') {
+            return NextResponse.json(
+                { error: 'Invalid input format' },
+                { status: 400 }
+            )
+        }
+
+        if (username.length > 50 || password.length > 100) {
+            return NextResponse.json(
+                { error: 'Input too long' },
+                { status: 400 }
+            )
+        }
+
+        console.log('Attempting login for username:', username)
 
         // Buscar usuario en la base de datos
         const adminUser = await prisma.adminUser.findUnique({
-            where: { username: username },
-        })
-        //  Si no se encuentra un usuario
-        if (!adminUser || !adminUser.is_active) {
-            console.log('Found user:', adminUser)
-            return NextResponse.json(
-                { error: 'Invalid credentials' },
-                { status: 401 }
-            )
-        }
-        console.log('Se encuentró un usuario:', adminUser)
-        // Verificar contraseña
-        const isValidPassword = password.toString() == adminUser.password
-        console.log('Verificar contraseña (son iguales):', isValidPassword)
-        if (!isValidPassword) {
-            return NextResponse.json(
-                { error: 'Invalid credentials' },
-                { status: 401 }
-            )
-        }
-        console.log('Actualizar last_login:', {
-            where: { id: adminUser.id },
-            data: { last_login: new Date() }
-        })
-        // Actualizar last_login
-        await prisma.adminUser.update({
-            where: { id: adminUser.id },
-            data: { last_login: new Date() }
+            where: { username: username.toLowerCase().trim() },
+            select: {
+                id: true,
+                username: true,
+                password: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+                is_active: true,
+                last_login: true
+            }
         })
 
-        // Crear sesión
+        // Verificar si el usuario existe y está activo
+        if (!adminUser) {
+            console.log('User not found:', username)
+            // Usar el mismo mensaje de error para evitar enumeration attacks
+            return NextResponse.json(
+                { error: 'Invalid credentials' },
+                { status: 401 }
+            )
+        }
+
+        if (!adminUser.is_active) {
+            console.log('User account is inactive:', username)
+            return NextResponse.json(
+                { error: 'Account is inactive' },
+                { status: 401 }
+            )
+        }
+
+        console.log('User found and active:', adminUser.username)
+
+        // Verificar contraseña
+        // NOTA: En producción, usa bcrypt.compare() para contraseñas hasheadas
+        const isValidPassword = password === adminUser.password
+        // Para contraseñas hasheadas:
+        // const isValidPassword = await bcrypt.compare(password, adminUser.password)
+
+        if (!isValidPassword) {
+            console.log('Invalid password for user:', username)
+            return NextResponse.json(
+                { error: 'Invalid credentials' },
+                { status: 401 }
+            )
+        }
+
+        console.log('Password verified for user:', username)
+
+        // Actualizar last_login
+        try {
+            await prisma.adminUser.update({
+                where: { id: adminUser.id },
+                data: { last_login: new Date() }
+            })
+            console.log('Updated last_login for user:', username)
+        } catch (updateError) {
+            console.error('Error updating last_login:', updateError)
+            // Continuar con el login aunque falle la actualización
+        }
+
+        // Crear datos de sesión
         const sessionData = {
             id: adminUser.id,
             username: adminUser.username,
             loginTime: new Date().toISOString()
         }
-        console.log('Crear sesión:', sessionData)
-        // Crear respuesta con cookie
-        const response = NextResponse.json(
-            {
-                success: true,
-                user: {
-                    id: adminUser.id,
-                    username: adminUser.username,
-                    first_name: adminUser.first_name,
-                    last_name: adminUser.last_name
-                }
-            },
-            { status: 200 }
-        )
-        console.log('Crear respuesta con cookie:', {
+
+        // Crear respuesta exitosa
+        const response = NextResponse.json({
             success: true,
             user: {
                 id: adminUser.id,
                 username: adminUser.username,
                 first_name: adminUser.first_name,
-                last_name: adminUser.last_name
+                last_name: adminUser.last_name,
+                email: adminUser.email
             }
-        })
+        }, { status: 200 })
 
         // Establecer cookie httpOnly para mayor seguridad
         response.cookies.set('adminSession', JSON.stringify(sessionData), {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 8 * 60 * 60 // 8 horas
+            maxAge: 8 * 60 * 60, // 8 horas
+            path: '/'
         })
-        console.log('Establecer cookie httpOnly para mayor seguridad: ', response)
+
+        console.log('Login successful for user:', username)
         return response
 
     } catch (error) {
@@ -99,12 +138,3 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// app/api/auth/logout/route.ts
-/*export async function POST() {
-    const response = NextResponse.json({success: true})
-
-    // Eliminar cookie
-    response.cookies.delete('adminSession')
-
-    return response
-}*/
