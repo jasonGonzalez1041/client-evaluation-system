@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/evaluations/export/route.ts
+// app/api/leads/export/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
@@ -8,8 +8,9 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const search = searchParams.get('search') || ''
-        const status = searchParams.get('status') || 'all'
-        const sortBy = searchParams.get('sortBy') || 'evaluated_at'
+        const type = searchParams.get('type') || 'all'
+        const company = searchParams.get('company') || 'all'
+        const sortBy = searchParams.get('sortBy') || 'created_at'
         const sortOrder = searchParams.get('sortOrder') || 'desc'
         const format = searchParams.get('format') || 'excel'
 
@@ -18,53 +19,61 @@ export async function GET(request: NextRequest) {
 
         if (search) {
             where.OR = [
-                { company_name: { contains: search, mode: 'insensitive' } },
-                { legal_id: { contains: search, mode: 'insensitive' } },
-                { notes: { contains: search, mode: 'insensitive' } },
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search, mode: 'insensitive' } },
+                { position: { contains: search, mode: 'insensitive' } },
+                { company: { company_name: { contains: search, mode: 'insensitive' } } },
             ]
         }
 
-        if (status !== 'all') {
-            where.evaluation_status = status // Cambiado de 'status' a 'evaluation_status'
+        if (type !== 'all') {
+            where.lead_type = type
         }
 
-        // Obtener todas las empresas evaluadas (sin paginación)
-        const companies = await prisma.company.findMany({
+        if (company !== 'all') {
+            where.company_id = company
+        }
+
+        // Obtener todos los leads (sin paginación)
+        const leads = await prisma.lead.findMany({
             where,
-            select: {
-                id: true,
-                company_name: true,
-                legal_id: true,
-                total_score: true,
-                percentage: true,
-                evaluation_status: true,
-                notes: true,
-                evaluated_by: true,
-                evaluated_at: true,
-                created_at: true
+            include: {
+                company: {
+                    select: {
+                        company_name: true,
+                        evaluation_status: true
+                    }
+                }
             },
             orderBy: {
                 [sortBy]: sortOrder
             }
         })
 
+        // Obtener la fecha actual en formato DD_MM_YYYY
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const dateStr = `${day}_${month}_${year}`;
+
+        // Crear el nombre del archivo con la fecha
+        const fileName = `leads_${dateStr}.${format === 'excel' ? 'csv' : 'pdf'}`;
+
         if (format === 'excel') {
             // Formatear datos para exportación Excel
-            const exportData = companies.map(company => ({
-                'Empresa': company.company_name,
-                'ID Legal': company.legal_id || '',
-                'Puntuación': company.total_score,
-                'Porcentaje': `${company.percentage}%`,
-                'Estado': company.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
-                'Notas': company.notes || '',
-                'Evaluado por': company.evaluated_by || '',
-                'Fecha Evaluación': company.evaluated_at
-                    ? new Date(company.evaluated_at).toLocaleDateString()
-                    : '',
-                'Hora Evaluación': company.evaluated_at
-                    ? new Date(company.evaluated_at).toLocaleTimeString()
-                    : ''
+            const exportData = leads.map(lead => ({
+                'Nombre': lead.name || '',
+                'Email': lead.email || '',
+                'Teléfono': lead.phone || '',
+                'Extensión': lead.extension || '',
+                'Posición': lead.position || '',
+                'Tipo': lead.lead_type,
+                'Empresa': lead.company.company_name,
+                'Estado Empresa': lead.company.evaluation_status === 'SUITABLE' ? 'Apto' :
+                    lead.company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
+                'Fecha Creación': new Date(lead.created_at).toLocaleDateString()
             }))
 
             // Implementar lógica para generar Excel
@@ -78,7 +87,7 @@ export async function GET(request: NextRequest) {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'text/csv',
-                    'Content-Disposition': 'attachment; filename=evaluaciones.csv'
+                    'Content-Disposition': `attachment; filename="${fileName}"`
                 })
             })
         } else {
@@ -95,10 +104,10 @@ export async function GET(request: NextRequest) {
             const smallLineHeight = 10
 
             // Título
-            currentPage.drawText('Historial de Evaluaciones', {
+            currentPage.drawText('Lista de Leads', {
                 x: margin,
                 y: yPosition,
-                size: 16,
+                size: 14,
                 font: boldFont,
                 color: rgb(0, 0, 0)
             })
@@ -106,11 +115,11 @@ export async function GET(request: NextRequest) {
             yPosition -= 25
 
             // Información de filtros aplicados
-            if (search || status !== 'all') {
+            if (search || type !== 'all' || company !== 'all') {
                 currentPage.drawText('Filtros aplicados:', {
                     x: margin,
                     y: yPosition,
-                    size: 10,
+                    size: 9,
                     font: boldFont,
                     color: rgb(0, 0, 0)
                 })
@@ -118,24 +127,33 @@ export async function GET(request: NextRequest) {
                 yPosition -= lineHeight
 
                 if (search) {
-                    const searchText = search.length > 40 ? search.substring(0, 37) + '...' : search
-                    currentPage.drawText(`Búsqueda: ${searchText}`, {
-                        x: margin,
+                    currentPage.drawText(`• Búsqueda: ${search}`, {
+                        x: margin + 5,
                         y: yPosition,
-                        size: 9,
+                        size: 8,
                         font: font,
                         color: rgb(0, 0, 0)
                     })
                     yPosition -= smallLineHeight
                 }
 
-                if (status !== 'all') {
-                    const statusText = status === 'SUITABLE' ? 'Apto' :
-                        status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
-                    currentPage.drawText(`Estado: ${statusText}`, {
-                        x: margin,
+                if (type !== 'all') {
+                    const typeText = type.charAt(0).toUpperCase() + type.slice(1)
+                    currentPage.drawText(`• Tipo: ${typeText}`, {
+                        x: margin + 5,
                         y: yPosition,
-                        size: 9,
+                        size: 8,
+                        font: font,
+                        color: rgb(0, 0, 0)
+                    })
+                    yPosition -= smallLineHeight
+                }
+
+                if (company !== 'all') {
+                    currentPage.drawText(`• Empresa: ${company}`, {
+                        x: margin + 5,
+                        y: yPosition,
+                        size: 8,
                         font: font,
                         color: rgb(0, 0, 0)
                     })
@@ -145,9 +163,9 @@ export async function GET(request: NextRequest) {
                 yPosition -= 8
             }
 
-            // Encabezados de tabla
-            const headersPdf = ['Empresa', 'Puntuación', 'Porcentaje', 'Estado', 'Fecha', 'Hora']
-            const columnWidths = [200, 70, 70, 80, 70, 60]
+            // Encabezados de tabla simplificados
+            const headersPdf = ['Nombre', 'Empresa', 'Correo', 'Teléfono', 'Estado', 'Fecha Registro']
+            const columnWidths = [100, 120, 130, 90, 70, 80] // Ajuste de anchos
             let xPosition = margin
 
             // Dibujar encabezados
@@ -155,7 +173,7 @@ export async function GET(request: NextRequest) {
                 currentPage.drawText(header, {
                     x: xPosition,
                     y: yPosition,
-                    size: 10,
+                    size: 9,
                     font: boldFont,
                     color: rgb(0, 0, 0)
                 })
@@ -174,20 +192,20 @@ export async function GET(request: NextRequest) {
 
             yPosition -= 8
 
-            // Datos de empresas
-            for (const company of companies) {
-                // Verificar si necesitamos una nueva página
-                if (yPosition < margin + 40) {
+            // Datos de leads
+            for (const lead of leads) {
+                // Verificar si necesitamos nueva página
+                if (yPosition < margin + 50) {
                     currentPage = pdfDoc.addPage([595.28, 841.89])
-                    yPosition = height - margin
+                    yPosition = height - margin - 20
 
-                    // Dibujar encabezados en la nueva página
+                    // Redibujar encabezados en nueva página
                     xPosition = margin
                     headersPdf.forEach((header, i) => {
                         currentPage.drawText(header, {
                             x: xPosition,
                             y: yPosition,
-                            size: 10,
+                            size: 9,
                             font: boldFont,
                             color: rgb(0, 0, 0)
                         })
@@ -206,99 +224,96 @@ export async function GET(request: NextRequest) {
 
                 xPosition = margin
 
-                // Empresa (truncar si es necesario)
-                const companyName = company.company_name.length > 35
-                    ? company.company_name.substring(0, 35) + '...'
-                    : company.company_name
-                currentPage.drawText(companyName, {
+                // Nombre
+                const name = lead.name || 'Sin nombre'
+                const nameDisplay = name.length > 25 ? name.substring(0, 22) + '...' : name
+                currentPage.drawText(nameDisplay, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[0]
 
-                // Puntuación
-                currentPage.drawText(company.total_score.toString(), {
+                // Empresa
+                const companyName = lead.company.company_name
+                const companyDisplay = companyName.length > 25 ? companyName.substring(0, 22) + '...' : companyName
+                currentPage.drawText(companyDisplay, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[1]
 
-                // Porcentaje
-                currentPage.drawText(`${company.percentage}%`, {
+                // Correo
+                const email = lead.email || 'N/A'
+                const emailDisplay = email.length > 30 ? email.substring(0, 27) + '...' : email
+                currentPage.drawText(emailDisplay, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[2]
 
-                // Estado
-                const statusText = company.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
-                currentPage.drawText(statusText, {
+                // Teléfono
+                const phone = lead.phone || 'N/A'
+                let phoneDisplay = phone
+                if (lead.extension) {
+                    phoneDisplay += ` ext.${lead.extension}`
+                }
+                phoneDisplay = phoneDisplay.length > 20 ? phoneDisplay.substring(0, 17) + '...' : phoneDisplay
+                currentPage.drawText(phoneDisplay, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[3]
 
-                // Fecha
-                const date = company.evaluated_at ? new Date(company.evaluated_at) : new Date(company.created_at)
-                const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear().toString().slice(-2)}`
-                currentPage.drawText(shortDate, {
+                // Estado de evaluación
+                let estado = 'No Apto'
+                if (lead.company.evaluation_status === 'SUITABLE') {
+                    estado = 'Apto'
+                } else if (lead.company.evaluation_status === 'POTENTIAL') {
+                    estado = 'Potencial'
+                }
+                currentPage.drawText(estado, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[4]
 
-                // Hora
-                const shortTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-                currentPage.drawText(shortTime, {
+                // Fecha de registro
+                const date = new Date(lead.created_at)
+                const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+                currentPage.drawText(shortDate, {
                     x: xPosition,
                     y: yPosition,
-                    size: 9,
+                    size: 8,
                     font: font,
                     color: rgb(0, 0, 0)
                 })
 
                 yPosition -= lineHeight
 
-                // Agregar notas si existen (en una línea adicional)
-                if (company.notes) {
-                    if (yPosition < margin + 20) {
-                        currentPage = pdfDoc.addPage([595.28, 841.89])
-                        yPosition = height - margin
-                    }
+                // Línea separadora sutil entre registros
+                currentPage.drawLine({
+                    start: { x: margin, y: yPosition + 3 },
+                    end: { x: width - margin, y: yPosition + 3 },
+                    thickness: 0.3,
+                    color: rgb(0.8, 0.8, 0.8)
+                })
 
-                    const notes = company.notes.length > 80
-                        ? company.notes.substring(0, 77) + '...'
-                        : company.notes
-
-                    currentPage.drawText(`Notas: ${notes}`, {
-                        x: margin + 10,
-                        y: yPosition,
-                        size: 8,
-                        font: font,
-                        color: rgb(0.5, 0.5, 0.5)
-                    })
-
-                    yPosition -= smallLineHeight
-                }
-
-                // Espacio adicional entre evaluaciones
-                yPosition -= 5
+                yPosition -= 4
             }
 
             // Guardar PDF
@@ -309,16 +324,16 @@ export async function GET(request: NextRequest) {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'application/pdf',
-                    'Content-Disposition': 'attachment; filename=evaluaciones.pdf',
+                    'Content-Disposition': `attachment; filename="${fileName}"`,
                     'Content-Length': pdfBuffer.length.toString()
                 })
             })
         }
 
     } catch (error) {
-        console.error('Error exporting evaluations:', error)
+        console.error('Error exporting leads:', error)
         return NextResponse.json(
-            { message: 'Error exporting evaluations' },
+            { message: 'Error exporting leads' },
             { status: 500 }
         )
     }

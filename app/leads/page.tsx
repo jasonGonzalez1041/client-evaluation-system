@@ -7,7 +7,7 @@ import {
     SidebarInset,
     SidebarProvider,
 } from "@/components/ui/sidebar"
-import { useEffect, useState, useCallback } from "react" // Importar useCallback
+import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,10 @@ import {
     ChevronDown,
     ChevronUp,
     Eye,
+    Mail,
+    Phone,
+    Building,
+    User,
     AlertCircle,
 } from "lucide-react"
 import {
@@ -48,30 +52,32 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
-interface Evaluation {
+interface Lead {
     id: string
-    company_name: string
-    legal_id: string | null
-    total_score: number
-    percentage: number
-    evaluation_status: string // Cambiado de 'status' a 'evaluation_status'
-    notes: string | null
-    evaluated_by: string | null
-    evaluated_at: string | null // Cambiado de 'created_at' a 'evaluated_at'
+    company_id: string
+    lead_type: string
+    position: string | null
+    name: string | null
+    phone: string | null
+    extension: string | null
+    email: string | null
     created_at: string
-    // Eliminado el objeto client anidado
+    company: {
+        company_name: string
+        evaluation_status: string
+    }
 }
 
-interface EvaluationsResponse {
-    evaluations: Evaluation[]
+interface LeadsResponse {
+    leads: Lead[]
     totalCount: number
     page: number
     pageSize: number
 }
 
-export default function EvaluationsPage() {
+export default function LeadsPage() {
     const { user, isLoading: authLoading } = useAuth()
-    const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+    const [leads, setLeads] = useState<Lead[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isPageChanging, setIsPageChanging] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -79,14 +85,15 @@ export default function EvaluationsPage() {
     const [pageSize, setPageSize] = useState(10)
     const [totalCount, setTotalCount] = useState(0)
     const [searchTerm, setSearchTerm] = useState("")
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("") // Término con debounce
-    const [statusFilter, setStatusFilter] = useState<string>("all")
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+    const [typeFilter, setTypeFilter] = useState<string>("all")
+    const [companyFilter, setCompanyFilter] = useState<string>("all")
     const [sortField, setSortField] = useState<string>("created_at")
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
     const [isExporting, setIsExporting] = useState(false)
 
-    // Función para obtener evaluaciones
-    const fetchEvaluations = useCallback(async (isPageChange = false) => {
+    // Función para obtener leads
+    const fetchLeads = useCallback(async (isPageChange = false) => {
         try {
             setError(null)
             if (isPageChange) {
@@ -97,19 +104,20 @@ export default function EvaluationsPage() {
                 page: page.toString(),
                 pageSize: pageSize.toString(),
                 search: debouncedSearchTerm,
-                status: statusFilter,
+                type: typeFilter,
+                company: companyFilter,
                 sortBy: sortField,
                 sortOrder: sortDirection
             })
 
-            const response = await fetch(`/api/evaluations?${params}`)
-            console.log(response);
+            const response = await fetch(`/api/leads?${params}`)
+
             if (!response.ok) {
-                throw new Error('Error al cargar las evaluaciones')
+                throw new Error('Error al cargar los leads')
             }
 
-            const data: EvaluationsResponse = await response.json()
-            setEvaluations(data.evaluations)
+            const data: LeadsResponse = await response.json()
+            setLeads(data.leads)
             setTotalCount(data.totalCount)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -119,26 +127,26 @@ export default function EvaluationsPage() {
                 setIsPageChanging(false)
             }
         }
-    }, [page, pageSize, debouncedSearchTerm, statusFilter, sortField, sortDirection])
+    }, [page, pageSize, debouncedSearchTerm, typeFilter, companyFilter, sortField, sortDirection])
 
     // Efecto para el debounce de búsqueda
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm)
-            setPage(1) // Reiniciar a la primera página al buscar
-        }, 500) // 500ms de debounce
+            setPage(1)
+        }, 500)
 
         return () => {
             clearTimeout(handler)
         }
     }, [searchTerm])
 
-    // Efecto principal para cargar evaluaciones
+    // Efecto principal para cargar leads
     useEffect(() => {
         if (user && !authLoading) {
-            fetchEvaluations()
+            fetchLeads()
         }
-    }, [user, authLoading, fetchEvaluations])
+    }, [user, authLoading, fetchLeads])
 
     const handleSort = (field: string) => {
         if (sortField === field) {
@@ -151,7 +159,7 @@ export default function EvaluationsPage() {
 
     const handlePageChange = (newPage: number) => {
         setPage(newPage);
-        fetchEvaluations(true);
+        fetchLeads(true);
     };
 
     const handleExport = async (format: 'pdf' | 'excel') => {
@@ -159,25 +167,36 @@ export default function EvaluationsPage() {
             setIsExporting(true)
             const params = new URLSearchParams({
                 search: debouncedSearchTerm,
-                status: statusFilter,
+                type: typeFilter,
+                company: companyFilter,
                 sortBy: sortField,
                 sortOrder: sortDirection,
                 format: format
             })
 
-            const response = await fetch(`/api/evaluations/export?${params}`)
+            const response = await fetch(`/api/leads/export?${params}`)
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}))
                 throw new Error(errorData.message || `Error al exportar ${format}`)
             }
 
+            // Obtener la fecha actual en formato DD_MM_YYYY
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const dateStr = `${day}_${month}_${year}`;
+
+            // Crear el nombre del archivo con la fecha
+            const fileName = `leads_${dateStr}.${format === 'excel' ? 'csv' : 'pdf'}`;
+
             if (format === 'excel') {
                 const blob = await response.blob()
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = 'evaluaciones.csv'
+                a.download = fileName
                 document.body.appendChild(a)
                 a.click()
                 window.URL.revokeObjectURL(url)
@@ -187,7 +206,7 @@ export default function EvaluationsPage() {
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = 'evaluaciones.pdf'
+                a.download = fileName
                 document.body.appendChild(a)
                 a.click()
                 window.URL.revokeObjectURL(url)
@@ -232,38 +251,36 @@ export default function EvaluationsPage() {
                     <div className="@container/main flex flex-1 flex-col gap-2">
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-4 lg:px-6">
-                                <h1 className="text-2xl font-bold">Historial de Evaluaciones</h1>
+                                <h1 className="text-2xl font-bold">Gestión de Leads</h1>
 
                                 <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            placeholder="Buscar evaluaciones..."
+                                            placeholder="Buscar leads..."
                                             value={searchTerm}
-                                            onChange={(e) => {
-                                                setSearchTerm(e.target.value)
-                                                // No reiniciamos la página aquí, lo hace el debounce
-                                            }}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
                                             className="pl-8"
                                         />
                                     </div>
 
                                     <Select
-                                        value={statusFilter}
+                                        value={typeFilter}
                                         onValueChange={(value) => {
-                                            setStatusFilter(value)
+                                            setTypeFilter(value)
                                             setPage(1)
                                         }}
                                     >
                                         <SelectTrigger className="w-full sm:w-[180px]">
                                             <Filter className="h-4 w-4 mr-2" />
-                                            <SelectValue placeholder="Filtrar por estado" />
+                                            <SelectValue placeholder="Filtrar por tipo" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            <SelectItem value="SUITABLE">Apto</SelectItem>
-                                            <SelectItem value="POTENTIAL">Potencial</SelectItem>
-                                            <SelectItem value="NOT_SUITABLE">No Apto</SelectItem>
+                                            <SelectItem value="all">Todos los tipos</SelectItem>
+                                            <SelectItem value="direcciones">Direcciones</SelectItem>
+                                            <SelectItem value="consejo">Consejo</SelectItem>
+                                            <SelectItem value="comite">Comité</SelectItem>
+                                            <SelectItem value="otros">Otros</SelectItem>
                                         </SelectContent>
                                     </Select>
 
@@ -294,7 +311,7 @@ export default function EvaluationsPage() {
                                         <AlertDescription>
                                             {error}
                                             <Button
-                                                onClick={() => fetchEvaluations()}
+                                                onClick={() => fetchLeads()}
                                                 variant="outline"
                                                 size="sm"
                                                 className="ml-2"
@@ -313,9 +330,24 @@ export default function EvaluationsPage() {
                                             <TableRow>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
+                                                    onClick={() => handleSort("name")}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <User className="h-4 w-4 mr-1" />
+                                                        Contacto
+                                                        {sortField === "name" && (
+                                                            sortDirection === "asc" ?
+                                                                <ChevronUp className="h-4 w-4 ml-1" /> :
+                                                                <ChevronDown className="h-4 w-4 ml-1" />
+                                                        )}
+                                                    </div>
+                                                </TableHead>
+                                                <TableHead
+                                                    className="cursor-pointer hover:bg-accent"
                                                     onClick={() => handleSort("company_name")}
                                                 >
                                                     <div className="flex items-center">
+                                                        <Building className="h-4 w-4 mr-1" />
                                                         Empresa
                                                         {sortField === "company_name" && (
                                                             sortDirection === "asc" ?
@@ -324,52 +356,27 @@ export default function EvaluationsPage() {
                                                         )}
                                                     </div>
                                                 </TableHead>
+                                                <TableHead>Posición</TableHead>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
-                                                    onClick={() => handleSort("total_score")}
+                                                    onClick={() => handleSort("lead_type")}
                                                 >
                                                     <div className="flex items-center">
-                                                        Puntuación
-                                                        {sortField === "score" && (
+                                                        Tipo
+                                                        {sortField === "lead_type" && (
                                                             sortDirection === "asc" ?
                                                                 <ChevronUp className="h-4 w-4 ml-1" /> :
                                                                 <ChevronDown className="h-4 w-4 ml-1" />
                                                         )}
                                                     </div>
                                                 </TableHead>
+                                                <TableHead>Contacto</TableHead>
                                                 <TableHead
                                                     className="cursor-pointer hover:bg-accent"
-                                                    onClick={() => handleSort("percentage")}
+                                                    onClick={() => handleSort("created_at")}
                                                 >
                                                     <div className="flex items-center">
-                                                        Porcentaje
-                                                        {sortField === "percentage" && (
-                                                            sortDirection === "asc" ?
-                                                                <ChevronUp className="h-4 w-4 ml-1" /> :
-                                                                <ChevronDown className="h-4 w-4 ml-1" />
-                                                        )}
-                                                    </div>
-                                                </TableHead>
-                                                <TableHead
-                                                    className="cursor-pointer hover:bg-accent"
-                                                    onClick={() => handleSort("evaluation_status")}
-                                                >
-                                                    <div className="flex items-center">
-                                                        Estado
-                                                        {sortField === "status" && (
-                                                            sortDirection === "asc" ?
-                                                                <ChevronUp className="h-4 w-4 ml-1" /> :
-                                                                <ChevronDown className="h-4 w-4 ml-1" />
-                                                        )}
-                                                    </div>
-                                                </TableHead>
-                                                <TableHead>Notas</TableHead>
-                                                <TableHead
-                                                    className="cursor-pointer hover:bg-accent"
-                                                    onClick={() => handleSort("evaluated_at")}
-                                                >
-                                                    <div className="flex items-center">
-                                                        Fecha Evaluación
+                                                        Fecha Creación
                                                         {sortField === "created_at" && (
                                                             sortDirection === "asc" ?
                                                                 <ChevronUp className="h-4 w-4 ml-1" /> :
@@ -393,55 +400,63 @@ export default function EvaluationsPage() {
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                     </TableRow>
                                                 ))
-                                            ) : evaluations.length > 0 ? (
-                                                evaluations.map((evaluation) => (
-                                                    <TableRow key={evaluation.id}>
+                                            ) : leads.length > 0 ? (
+                                                leads.map((lead) => (
+                                                    <TableRow key={lead.id}>
                                                         <TableCell className="font-medium">
                                                             <div>
-                                                                <div>{evaluation.company_name}</div>
-                                                                {evaluation.legal_id && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {evaluation.legal_id}
+                                                                <div>{lead.name || "Sin nombre"}</div>
+                                                                {lead.email && (
+                                                                    <div className="text-sm text-muted-foreground flex items-center">
+                                                                        <Mail className="h-3 w-3 mr-1" />
+                                                                        {lead.email}
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="font-medium">{evaluation.total_score} pts</div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="font-medium">{evaluation.percentage}%</div>
-                                                        </TableCell>
-                                                        <TableCell>
+                                                            <div className="font-medium">{lead.company.company_name}</div>
                                                             <Badge
                                                                 variant="outline"
                                                                 className={
-                                                                    evaluation.evaluation_status === "SUITABLE"
-                                                                        ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                                                        : evaluation.evaluation_status === "POTENTIAL"
-                                                                            ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                                                                            : "bg-red-100 text-red-800 hover:bg-red-100"
+                                                                    lead.company.evaluation_status === "SUITABLE"
+                                                                        ? "bg-green-100 text-green-800 hover:bg-green-100 text-xs"
+                                                                        : lead.company.evaluation_status === "POTENTIAL"
+                                                                            ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 text-xs"
+                                                                            : "bg-red-100 text-red-800 hover:bg-red-100 text-xs"
                                                                 }
                                                             >
-                                                                {evaluation.evaluation_status === "SUITABLE"
+                                                                {lead.company.evaluation_status === "SUITABLE"
                                                                     ? "Apto"
-                                                                    : evaluation.evaluation_status === "POTENTIAL"
+                                                                    : lead.company.evaluation_status === "POTENTIAL"
                                                                         ? "Potencial"
                                                                         : "No Apto"}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="max-w-xs truncate">
-                                                            {evaluation.notes || "Sin notas"}
+                                                        <TableCell>
+                                                            {lead.position || "No especificado"}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {evaluation.evaluated_at
-                                                                ? `${new Date(evaluation.evaluated_at).toLocaleDateString()} ${new Date(evaluation.evaluated_at).toLocaleTimeString()}`
-                                                                : "No evaluada"}
+                                                            <Badge variant="secondary" className="capitalize">
+                                                                {lead.lead_type}
+                                                            </Badge>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Link href={`/clients/${evaluation.id}`} title="Ver detalles de la evaluación">
+                                                            {lead.phone && (
+                                                                <div className="flex items-center text-sm">
+                                                                    <Phone className="h-3 w-3 mr-1" />
+                                                                    {lead.phone}
+                                                                    {lead.extension && ` ext. ${lead.extension}`}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {new Date(lead.created_at).toLocaleDateString()}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Link href={`/clients/${lead.company_id}`} title="Ver empresa">
                                                                 <Button variant="ghost" size="sm">
-                                                                    <Eye className="h-4 w-4 mr-1" />
+                                                                    <Eye className="h-4 w-4" />
                                                                 </Button>
                                                             </Link>
                                                         </TableCell>
@@ -450,9 +465,9 @@ export default function EvaluationsPage() {
                                             ) : (
                                                 <TableRow>
                                                     <TableCell colSpan={7} className="h-24 text-center">
-                                                        {debouncedSearchTerm || statusFilter !== 'all'
-                                                            ? "No se encontraron evaluaciones con los filtros aplicados."
-                                                            : "No se encontraron evaluaciones."
+                                                        {debouncedSearchTerm || typeFilter !== 'all'
+                                                            ? "No se encontraron leads con los filtros aplicados."
+                                                            : "No se encontraron leads."
                                                         }
                                                     </TableCell>
                                                 </TableRow>
@@ -461,7 +476,7 @@ export default function EvaluationsPage() {
                                     </Table>
                                 </div>
 
-                                {/* Paginación con indicador de carga */}
+                                {/* Paginación */}
                                 <div className="flex items-center justify-between space-x-6 lg:space-x-8 mt-4">
                                     <div className="flex items-center space-x-2">
                                         <p className="text-sm font-medium">Filas por página</p>

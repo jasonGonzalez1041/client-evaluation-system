@@ -10,35 +10,38 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '10')
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || 'all'
-    const sortBy = searchParams.get('sortBy') || 'created_at'
+    const sortBy = searchParams.get('sortBy') || 'evaluated_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Construir condiciones de filtrado
+    // Construir condiciones de filtrado - solo empresas evaluadas
     const where: any = {}
 
     if (search) {
       where.OR = [
-        { client: { company_name: { contains: search, mode: 'insensitive' } } },
-        { client: { legal_id: { contains: search, mode: 'insensitive' } } },
+        { company_name: { contains: search, mode: 'insensitive' } },
+        { legal_id: { contains: search, mode: 'insensitive' } },
         { notes: { contains: search, mode: 'insensitive' } },
       ]
     }
 
     if (status !== 'all') {
-      where.status = status
+      where.evaluation_status = status
     }
 
-    // Obtener evaluaciones
-    const evaluations = await prisma.evaluation.findMany({
+    // Obtener empresas evaluadas (que funcionan como evaluaciones)
+    const companies = await prisma.company.findMany({
       where,
-      include: {
-        client: {
-          select: {
-            id: true,
-            company_name: true,
-            legal_id: true,
-          }
-        }
+      select: {
+        id: true,
+        company_name: true,
+        legal_id: true,
+        total_score: true,
+        percentage: true,
+        evaluation_status: true,
+        notes: true,
+        evaluated_by: true,
+        evaluated_at: true,
+        created_at: true
       },
       orderBy: {
         [sortBy]: sortOrder
@@ -48,10 +51,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Obtener conteo total
-    const totalCount = await prisma.evaluation.count({ where })
+    const totalCount = await prisma.company.count({ where })
 
     return NextResponse.json({
-      evaluations,
+      evaluations: companies, // Ahora las evaluaciones son las empresas evaluadas
       totalCount,
       page,
       pageSize

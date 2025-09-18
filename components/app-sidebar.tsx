@@ -63,7 +63,7 @@ const data = {
         },
         {
             title: "Leads",
-            url: "/contacts",
+            url: "/leads",
             icon: Contact,
         },
         {
