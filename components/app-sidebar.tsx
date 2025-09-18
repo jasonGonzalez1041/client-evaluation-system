@@ -53,7 +53,7 @@ const data = {
         },
         {
             title: "Ingresos",
-            url: "/clients",
+            url: "/companies",
             icon: Users,
         },
         {

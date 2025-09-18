@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
             where.evaluation_status = status
         }
 
-        // Obtener todos los clientes (sin paginación)
-        const clients = await prisma.client.findMany({
+        // Obtener todas las compañías (sin paginación)
+        const companies = await prisma.company.findMany({
             where,
             include: {
-                contacts: {
+                leads: {
                     take: 1,
                     orderBy: {
                         created_at: 'desc'
@@ -46,21 +46,21 @@ export async function GET(request: NextRequest) {
 
         if (format === 'excel') {
             // Formatear datos para exportación Excel
-            const exportData = clients.map(client => ({
-                'Empresa': client.company_name,
-                'ID Legal': client.legal_id || '',
-                'Ubicación': client.geographic_location || '',
-                'Teléfono': client.phone || '',
-                'Email': client.email || '',
-                'Website': client.website || '',
-                'Empleados': client.employees || '',
-                'Puntuación (%)': client.percentage,
-                'Puntos': client.total_score,
-                'Estado': client.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
-                'Contacto': client.contacts[0]?.name || '',
-                'Email Contacto': client.contacts[0]?.email || '',
-                'Fecha Creación': new Date(client.created_at).toLocaleDateString()
+            const exportData = companies.map(company => ({
+                'Empresa': company.company_name,
+                'ID Legal': company.legal_id || '',
+                'Ubicación': company.geographic_location || '',
+                'Teléfono': company.phone || '',
+                'Email': company.email || '',
+                'Website': company.website || '',
+                'Empleados': company.employees || '',
+                'Puntuación (%)': company.percentage,
+                'Puntos': company.total_score,
+                'Estado': company.evaluation_status === 'SUITABLE' ? 'Apto' :
+                    company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
+                'Contacto': company.leads[0]?.name || '',
+                'Email Contacto': company.leads[0]?.email || '',
+                'Fecha Creación': new Date(company.created_at).toLocaleDateString()
             }))
 
             // Implementar lógica para generar Excel
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'text/csv',
-                    'Content-Disposition': 'attachment; filename=clientes.csv'
+                    'Content-Disposition': 'attachment; filename=compañías.csv'
                 })
             })
         } else {
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
             const smallLineHeight = 10 // Para texto más pequeño
 
             // Título
-            currentPage.drawText('Lista de Clientes', {
+            currentPage.drawText('Lista de Compañías', {
                 x: margin,
                 y: yPosition,
                 size: 16, // Tamaño ligeramente menor
@@ -171,8 +171,8 @@ export async function GET(request: NextRequest) {
 
             yPosition -= 8 // Reducir espacio después de la línea
 
-            // Datos de clientes
-            for (const client of clients) {
+            // Datos de compañías
+            for (const company of companies) {
                 // Verificar si necesitamos una nueva página
                 if (yPosition < margin + 40) {
                     currentPage = pdfDoc.addPage([595.28, 841.89])
@@ -204,9 +204,9 @@ export async function GET(request: NextRequest) {
                 xPosition = margin
 
                 // Empresa (truncar si es necesario)
-                const companyName = client.company_name.length > 40
-                    ? client.company_name.substring(0, 40) + '...'
-                    : client.company_name
+                const companyName = company.company_name.length > 40
+                    ? company.company_name.substring(0, 40) + '...'
+                    : company.company_name
                 currentPage.drawText(companyName, {
                     x: xPosition,
                     y: yPosition,
@@ -217,10 +217,10 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[0]
 
                 // Ubicación (truncar si es necesario)
-                const location = client.geographic_location
-                    ? (client.geographic_location.length > 30
-                        ? client.geographic_location.substring(0, 30) + '...'
-                        : client.geographic_location)
+                const location = company.geographic_location
+                    ? (company.geographic_location.length > 30
+                        ? company.geographic_location.substring(0, 30) + '...'
+                        : company.geographic_location)
                     : 'N/A'
                 currentPage.drawText(location, {
                     x: xPosition,
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[1]
 
                 // Puntuación
-                currentPage.drawText(`${client.percentage}%`, {
+                currentPage.drawText(`${company.percentage}%`, {
                     x: xPosition,
                     y: yPosition,
                     size: 9,
@@ -242,8 +242,8 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[2]
 
                 // Estado
-                const statusText = client.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    client.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
+                const statusText = company.evaluation_status === 'SUITABLE' ? 'Apto' :
+                    company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
                 currentPage.drawText(statusText, {
                     x: xPosition,
                     y: yPosition,
@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[3]
 
                 // Contacto (truncar si es necesario)
-                const contactName = client.contacts[0]?.name || 'Sin contacto'
+                const contactName = company.leads[0]?.name || 'Sin contacto'
                 const contactDisplay = contactName.length > 15
                     ? contactName.substring(0, 12) + '...'
                     : contactName
@@ -268,7 +268,7 @@ export async function GET(request: NextRequest) {
                 xPosition += columnWidths[4]
 
                 // Fecha (formato más corto)
-                const date = new Date(client.created_at)
+                const date = new Date(company.created_at)
                 const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear().toString().slice(-2)}`
                 currentPage.drawText(shortDate, {
                     x: xPosition,
@@ -291,16 +291,16 @@ export async function GET(request: NextRequest) {
                 status: 200,
                 headers: new Headers({
                     'Content-Type': 'application/pdf',
-                    'Content-Disposition': 'attachment; filename=clientes.pdf',
+                    'Content-Disposition': 'attachment; filename=compañías.pdf',
                     'Content-Length': pdfBuffer.length.toString()
                 })
             })
         }
 
     } catch (error) {
-        console.error('Error exporting clients:', error)
+        console.error('Error exporting companies:', error)
         return NextResponse.json(
-            { message: 'Error exporting clients' },
+            { message: 'Error exporting companies' },
             { status: 500 }
         )
     }

@@ -288,9 +288,7 @@ export default function ImprovedDashboardPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {dashboardData.stats.totalCompanies > 0
-                          ? Math.round((dashboardData.stats.suitableCompanies / dashboardData.stats.totalCompanies) * 100)
-                          : 0}%
+                        {dashboardData.stats.totalCompanies}
                       </div>
                       <p className="text-xs text-muted-foreground">Empresas evaluadas</p>
                     </CardContent>

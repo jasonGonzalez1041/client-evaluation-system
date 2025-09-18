@@ -46,7 +46,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
-interface Client {
+interface Company {
     id: string
     company_name: string
     legal_id: string | null
@@ -60,20 +60,19 @@ interface Client {
     evaluation_status: string
     created_at: string
     updated_at: string
-    contacts: any[]
-    lastEvaluation?: any
+    leads: any[]
 }
 
-interface ClientsResponse {
-    clients: Client[]
+interface CompaniesResponse {
+    companies: Company[]
     totalCount: number
     page: number
     pageSize: number
 }
 
-export default function ClientsPage() {
+export default function CompaniesPage() {
     const { user, isLoading: authLoading } = useAuth()
-    const [clients, setClients] = useState<Client[]>([])
+    const [companies, setCompanies] = useState<Company[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isPageChanging, setIsPageChanging] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -86,7 +85,7 @@ export default function ClientsPage() {
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
     const [isExporting, setIsExporting] = useState(false)
 
-    const fetchClients = async (isPageChange = false) => {
+    const fetchCompanies = async (isPageChange = false) => {
         try {
             setError(null)
             if (isPageChange) {
@@ -102,14 +101,14 @@ export default function ClientsPage() {
                 sortOrder: sortDirection
             })
 
-            const response = await fetch(`/api/clients?${params}`)
+            const response = await fetch(`/api/companies?${params}`)
 
             if (!response.ok) {
-                throw new Error('Error al cargar los clientes')
+                throw new Error('Error al cargar las compañías')
             }
 
-            const data: ClientsResponse = await response.json()
-            setClients(data.clients)
+            const data: CompaniesResponse = await response.json()
+            setCompanies(data.companies)
             setTotalCount(data.totalCount)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -123,7 +122,7 @@ export default function ClientsPage() {
 
     useEffect(() => {
         if (user && !authLoading) {
-            fetchClients()
+            fetchCompanies()
         }
     }, [user, authLoading, page, pageSize, searchTerm, statusFilter, sortField, sortDirection])
 
@@ -138,7 +137,7 @@ export default function ClientsPage() {
 
     const handlePageChange = (newPage: number) => {
         setPage(newPage);
-        fetchClients(true);
+        fetchCompanies(true);
     };
 
     const handleExport = async (format: 'pdf' | 'excel') => {
@@ -151,7 +150,7 @@ export default function ClientsPage() {
                 sortOrder: sortDirection
             })
 
-            const response = await fetch(`/api/clients/export?${params}&format=${format}`)
+            const response = await fetch(`/api/companies/export?${params}&format=${format}`)
 
             if (!response.ok) {
                 throw new Error(`Error al exportar ${format}`)
@@ -161,7 +160,7 @@ export default function ClientsPage() {
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `clientes.${format === 'pdf' ? 'pdf' : 'xlsx'}`
+            a.download = `compañías.${format === 'pdf' ? 'pdf' : 'xlsx'}`
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -205,13 +204,13 @@ export default function ClientsPage() {
                     <div className="@container/main flex flex-1 flex-col gap-2">
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-4 lg:px-6">
-                                <h1 className="text-2xl font-bold">Listado de ingresos</h1>
+                                <h1 className="text-2xl font-bold">Listado de Compañías</h1>
 
                                 <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            placeholder="Buscar clientes..."
+                                            placeholder="Buscar compañías..."
                                             value={searchTerm}
                                             onChange={(e) => {
                                                 setSearchTerm(e.target.value)
@@ -267,7 +266,7 @@ export default function ClientsPage() {
                                         <AlertDescription>
                                             {error}
                                             <Button
-                                                onClick={() => fetchClients()}
+                                                onClick={() => fetchCompanies()}
                                                 variant="outline"
                                                 size="sm"
                                                 className="ml-2"
@@ -352,25 +351,25 @@ export default function ClientsPage() {
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                     </TableRow>
                                                 ))
-                                            ) : clients.length > 0 ? (
-                                                clients.map((client) => (
-                                                    <TableRow key={client.id}>
+                                            ) : companies.length > 0 ? (
+                                                companies.map((company) => (
+                                                    <TableRow key={company.id}>
                                                         <TableCell className="font-medium">
                                                             <div>
-                                                                <div>{client.company_name}</div>
-                                                                {client.legal_id && (
+                                                                <div>{company.company_name}</div>
+                                                                {company.legal_id && (
                                                                     <div className="text-sm text-muted-foreground">
-                                                                        {client.legal_id}
+                                                                        {company.legal_id}
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>{client.geographic_location || "N/A"}</TableCell>
+                                                        <TableCell>{company.geographic_location || "N/A"}</TableCell>
                                                         <TableCell>
                                                             <div>
-                                                                <div className="font-medium">{client.percentage}%</div>
+                                                                <div className="font-medium">{company.percentage}%</div>
                                                                 <div className="text-sm text-muted-foreground">
-                                                                    {client.total_score} pts
+                                                                    {company.total_score} pts
                                                                 </div>
                                                             </div>
                                                         </TableCell>
@@ -378,28 +377,28 @@ export default function ClientsPage() {
                                                             <Badge
                                                                 variant="outline"
                                                                 className={
-                                                                    client.evaluation_status === "SUITABLE"
+                                                                    company.evaluation_status === "SUITABLE"
                                                                         ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                                                        : client.evaluation_status === "POTENTIAL"
+                                                                        : company.evaluation_status === "POTENTIAL"
                                                                             ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
                                                                             : "bg-red-100 text-red-800 hover:bg-red-100"
                                                                 }
                                                             >
-                                                                {client.evaluation_status === "SUITABLE"
+                                                                {company.evaluation_status === "SUITABLE"
                                                                     ? "Apto"
-                                                                    : client.evaluation_status === "POTENTIAL"
+                                                                    : company.evaluation_status === "POTENTIAL"
                                                                         ? "Potencial"
                                                                         : "No Apto"}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>
-                                                            {client.contacts && client.contacts.length > 0 ? (
+                                                            {company.leads && company.leads.length > 0 ? (
                                                                 <div>
                                                                     <div className="font-medium">
-                                                                        {client.contacts[0].name || "Sin nombre"}
+                                                                        {company.leads[0].name || "Sin nombre"}
                                                                     </div>
                                                                     <div className="text-sm text-muted-foreground">
-                                                                        {client.contacts[0].email || "Sin email"}
+                                                                        {company.leads[0].email || "Sin email"}
                                                                     </div>
                                                                 </div>
                                                             ) : (
@@ -407,14 +406,14 @@ export default function ClientsPage() {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {new Date(client.created_at).toLocaleDateString()}
+                                                            {new Date(company.created_at).toLocaleDateString()}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
                                             ) : (
                                                 <TableRow>
                                                     <TableCell colSpan={6} className="h-24 text-center">
-                                                        No se encontraron clientes.
+                                                        No se encontraron compañías.
                                                     </TableCell>
                                                 </TableRow>
                                             )}
@@ -425,7 +424,7 @@ export default function ClientsPage() {
                                 {/* Paginación con indicador de carga */}
                                 <div className="flex items-center justify-between space-x-6 lg:space-x-8 mt-4">
                                     <div className="flex items-center space-x-2">
-                                        <p className="text-sm font-medium">Clientes por página</p>
+                                        <p className="text-sm font-medium">Compañías por página</p>
                                         <Select
                                             value={pageSize.toString()}
                                             onValueChange={(value) => {
