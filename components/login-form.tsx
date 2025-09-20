@@ -54,7 +54,10 @@ export function LoginForm({
                 localStorage.setItem('adminSession', JSON.stringify({
                     id: data.user.id,
                     username: data.user.username,
-                    loginTime: new Date().toISOString()
+                    first_name: data.user.first_name,
+                    last_name: data.user.last_name,
+                    email: data.user.email,
+                    loginTime: new Date().toISOString(),
                 }))
 
                 toast.success("Inicio de sesión exitoso")

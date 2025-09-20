@@ -1,16 +1,16 @@
-// hooks/useAuth.ts
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { SessionData } from '@/lib/auth'
 
-interface AdminUser {
-    id: string
-    username: string
-    loginTime: string
+export interface User extends SessionData {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
 }
 
 export function useAuth() {
-    const [user, setUser] = useState<AdminUser | null>(null)
+    const [user, setUser] = useState<User | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
 
@@ -18,7 +18,7 @@ export function useAuth() {
         checkAuth()
     }, [])
 
-    const checkAuth = () => {
+    const checkAuth = useCallback(() => {
         try {
             const sessionData = localStorage.getItem('adminSession')
             if (sessionData) {
@@ -34,6 +34,8 @@ export function useAuth() {
                 } else {
                     logout()
                 }
+            } else {
+                setUser(null)
             }
         } catch (error) {
             console.error('Error checking auth:', error)
@@ -41,14 +43,36 @@ export function useAuth() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [])
 
-    const logout = () => {
+    const updateSession = useCallback((updatedData: Partial<User>) => {
+        try {
+            const sessionData = localStorage.getItem('adminSession')
+            if (sessionData) {
+                const userData = JSON.parse(sessionData)
+                const updatedUser = { ...userData, ...updatedData }
+
+                // Actualizar localStorage
+                localStorage.setItem('adminSession', JSON.stringify(updatedUser))
+
+                // Actualizar estado
+                setUser(updatedUser)
+
+                return true
+            }
+            return false
+        } catch (error) {
+            console.error('Error updating session:', error)
+            return false
+        }
+    }, [])
+
+    const logout = useCallback(() => {
         localStorage.removeItem('adminSession')
         document.cookie = 'adminSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
         setUser(null)
         router.push('/login')
-    }
+    }, [router])
 
     const isAuthenticated = !!user
 
@@ -57,6 +81,7 @@ export function useAuth() {
         isAuthenticated,
         isLoading,
         logout,
-        checkAuth
+        checkAuth,
+        updateSession
     }
 }

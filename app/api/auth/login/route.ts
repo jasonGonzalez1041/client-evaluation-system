@@ -96,10 +96,13 @@ export async function POST(request: NextRequest) {
             // Continuar con el login aunque falle la actualización
         }
 
-        // Crear datos de sesión
+        // Crear datos de sesión con información ampliada
         const sessionData = {
             id: adminUser.id,
             username: adminUser.username,
+            first_name: adminUser.first_name,
+            last_name: adminUser.last_name,
+            email: adminUser.email,
             loginTime: new Date().toISOString()
         }
 
@@ -137,4 +140,3 @@ export async function POST(request: NextRequest) {
         await prisma.$disconnect()
     }
 }
-
