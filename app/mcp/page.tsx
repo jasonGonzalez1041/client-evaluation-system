@@ -71,22 +71,12 @@ const suggestedQuestions: SuggestedQuestion[] = [
         category: "Tiempo"
     },
     {
-        question: "¿Cuántas empresas hay por cada estado de evaluación?",
-        icon: BarChart3,
-        category: "Estadísticas"
-    },
-    {
-        question: "Mostrar leads de tipo direcciones con información de contacto",
-        icon: Users,
-        category: "Contactos"
-    },
-    {
         question: "Empresas con puntaje de evaluación mayor a 70%",
         icon: Building,
         category: "Calificación"
     },
     {
-        question: "¿Cuántos leads tiene la empresa [nombre]?",
+        question: "¿Cuántos leads tiene la empresa SAS?",
         icon: Users,
         category: "Específico"
     }
@@ -181,7 +171,8 @@ export default function MCPPage() {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: 'Lo siento, hubo un error procesando tu consulta. Por favor intenta de nuevo.',
-                timestamp: new Date()
+                timestamp: new Date(),
+                error: true
             }
 
             setMessages(prev => [...prev, errorMessage])
@@ -248,7 +239,7 @@ export default function MCPPage() {
                         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 h-[calc(100vh-var(--header-height)-2rem)]">
 
                             {/* Header */}
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-4 lg:px-6">
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-4 lg:px-6 flex-shrink-0">
                                 <div className="flex items-center gap-2">
                                     <MessageCircle className="h-6 w-6" />
                                     <h1 className="text-2xl font-bold">Asistente CRM</h1>
@@ -265,7 +256,7 @@ export default function MCPPage() {
                             </div>
 
                             {error && (
-                                <div className="px-4 lg:px-6">
+                                <div className="px-4 lg:px-6 flex-shrink-0">
                                     <Alert variant="destructive">
                                         <AlertCircle className="h-4 w-4" />
                                         <AlertDescription>{error}</AlertDescription>
@@ -277,13 +268,16 @@ export default function MCPPage() {
 
                                 {/* Chat Area */}
                                 <Card className="flex-1 flex flex-col min-h-0">
-                                    <CardHeader className="pb-4">
+                                    <CardHeader className="flex-shrink-0">
                                         <CardTitle className="text-lg">Chat</CardTitle>
                                     </CardHeader>
                                     <CardContent className="flex-1 flex flex-col min-h-0 p-0">
 
                                         {/* Messages */}
-                                        <ScrollArea className="flex-1 px-6">
+                                        <ScrollArea
+                                            className="flex-1 px-6 min-h-0"
+                                            style={{ maxHeight: 'calc(100vh - 340px)' }}
+                                        >
                                             <div className="space-y-4 pb-4">
                                                 {messages.map((message) => (
                                                     <div
@@ -298,8 +292,8 @@ export default function MCPPage() {
 
                                                         <div className={`max-w-[80%] ${message.role === 'user' ? 'order-first' : ''}`}>
                                                             <div className={`rounded-lg px-4 py-2 ${message.role === 'user'
-                                                                    ? 'bg-blue-500 text-white ml-auto'
-                                                                    : 'bg-gray-100 text-gray-900'
+                                                                ? 'bg-blue-500 text-white ml-auto'
+                                                                : 'bg-gray-100 text-gray-900'
                                                                 }`}>
                                                                 <div className="whitespace-pre-wrap break-words">
                                                                     {message.content}
@@ -391,7 +385,7 @@ export default function MCPPage() {
                                         </ScrollArea>
 
                                         {/* Input Area */}
-                                        <div className="border-t p-4">
+                                        <div className="border-t p-4 flex-shrink-0">
                                             <div className="flex gap-2">
                                                 <Input
                                                     ref={inputRef}
@@ -415,42 +409,50 @@ export default function MCPPage() {
                                 </Card>
 
                                 {/* Suggestions Sidebar */}
-                                <Card className="w-full lg:w-80 flex-shrink-0">
-                                    <CardHeader>
+                                <Card className="w-full lg:w-96 flex-shrink-0 flex flex-col">
+                                    <CardHeader className="pb-3 flex-shrink-0">
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <Lightbulb className="h-5 w-5" />
                                             Preguntas Sugeridas
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        {suggestedQuestions.map((suggestion, index) => {
-                                            const IconComponent = suggestion.icon
-                                            return (
-                                                <div key={index}>
-                                                    <Button
-                                                        variant="outline"
-                                                        className="w-full justify-start text-left h-auto py-3 px-3"
-                                                        onClick={() => sendMessage(suggestion.question)}
-                                                        disabled={isLoading}
-                                                    >
-                                                        <div className="flex items-start gap-2 w-full">
-                                                            <IconComponent className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="text-sm font-medium break-words">
-                                                                    {suggestion.question}
+                                    <CardContent className="p-0 flex-1 min-h-0">
+                                        <ScrollArea
+                                            className="h-full"
+                                            style={{ maxHeight: 'calc(100vh - 280px)' }}
+                                        >
+                                            <div className="space-y-2 p-4">
+                                                {suggestedQuestions.map((suggestion, index) => {
+                                                    const IconComponent = suggestion.icon
+                                                    const isLongText = suggestion.question.length > 47
+                                                    return (
+                                                        <div key={index}>
+                                                            <Button
+                                                                variant="outline"
+                                                                className="w-full justify-start text-left h-auto py-3 px-3 hover:bg-gray-50"
+                                                                onClick={() => sendMessage(suggestion.question)}
+                                                                disabled={isLoading}
+                                                            >
+                                                                <div className="flex gap-2 w-full">
+                                                                    <IconComponent className="h-4 w-4 mt-0.5 flex-shrink-0 text-gray-600" />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="text-sm font-medium break-words leading-tight mb-1">
+                                                                            {suggestion.question}
+                                                                        </div>
+                                                                        <Badge variant="secondary" className="text-xs">
+                                                                            {suggestion.category}
+                                                                        </Badge>
+                                                                    </div>
                                                                 </div>
-                                                                <Badge variant="secondary" className="text-xs mt-1">
-                                                                    {suggestion.category}
-                                                                </Badge>
-                                                            </div>
+                                                            </Button>
+                                                            {index < suggestedQuestions.length - 1 && (
+                                                                <Separator className="mt-2" />
+                                                            )}
                                                         </div>
-                                                    </Button>
-                                                    {index < suggestedQuestions.length - 1 && (
-                                                        <Separator className="mt-3" />
-                                                    )}
-                                                </div>
-                                            )
-                                        })}
+                                                    )
+                                                })}
+                                            </div>
+                                        </ScrollArea>
                                     </CardContent>
                                 </Card>
                             </div>

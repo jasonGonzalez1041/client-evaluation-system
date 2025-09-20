@@ -3,7 +3,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -13,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, RefreshCw, TrendingUp, Users, Target, BarChart3, MapPin, Calendar, Building } from "lucide-react"
+import { AlertCircle, RefreshCw, TrendingUp, Users, Target, BarChart3, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -23,6 +22,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts'
+import { useRouter } from "next/navigation"
 
 interface DashboardData {
   stats: {
@@ -86,19 +86,14 @@ const CHART_COLORS = {
   total: '#3b82f6',       // azul
 }
 
-const STATUS_COLORS = {
-  SUITABLE: { light: '#10b981', dark: '#059669' },
-  POTENTIAL: { light: '#f59e0b', dark: '#d97706' },
-  NOT_SUITABLE: { light: '#ef4444', dark: '#dc2626' },
-}
 
 export default function ImprovedDashboardPage() {
-  const { user, logout, isLoading: authLoading } = useAuth()
-  const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const router = useRouter()
 
   const fetchDashboardData = async () => {
     try {
@@ -141,14 +136,7 @@ export default function ImprovedDashboardPage() {
 
   // Estado no autorizado - ahora con redirección automática
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="mb-4">Redirigiendo al login...</p>
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-        </div>
-      </div>
-    )
+    router.push('/login')
   }
 
   // Función para obtener la etiqueta del estado en español

@@ -72,8 +72,7 @@ export async function GET(request: NextRequest) {
                 'Tipo': lead.lead_type,
                 'Empresa': lead.company.company_name,
                 'Estado Empresa': lead.company.evaluation_status === 'SUITABLE' ? 'Apto' :
-                    lead.company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto',
-                'Fecha Creación': new Date(lead.created_at).toLocaleDateString()
+                    lead.company.evaluation_status === 'POTENTIAL' ? 'Potencial' : 'No Apto'
             }))
 
             // Implementar lógica para generar Excel
@@ -164,8 +163,8 @@ export async function GET(request: NextRequest) {
             }
 
             // Encabezados de tabla simplificados
-            const headersPdf = ['Nombre', 'Empresa', 'Correo', 'Teléfono', 'Estado', 'Fecha Registro']
-            const columnWidths = [100, 120, 130, 90, 70, 80] // Ajuste de anchos
+            const headersPdf = ['Nombre', 'Empresa', 'Correo', 'Teléfono']
+            const columnWidths = [100, 120, 180, 100] // Ajuste de anchos
             let xPosition = margin
 
             // Dibujar encabezados
@@ -226,7 +225,7 @@ export async function GET(request: NextRequest) {
 
                 // Nombre
                 const name = lead.name || 'Sin nombre'
-                const nameDisplay = name.length > 25 ? name.substring(0, 22) + '...' : name
+                const nameDisplay = name.length > 30 ? name.substring(0, 30) + '...' : name
                 currentPage.drawText(nameDisplay, {
                     x: xPosition,
                     y: yPosition,
@@ -238,7 +237,7 @@ export async function GET(request: NextRequest) {
 
                 // Empresa
                 const companyName = lead.company.company_name
-                const companyDisplay = companyName.length > 25 ? companyName.substring(0, 22) + '...' : companyName
+                const companyDisplay = companyName.length > 30 ? companyName.substring(0, 30) + '...' : companyName
                 currentPage.drawText(companyDisplay, {
                     x: xPosition,
                     y: yPosition,
@@ -250,7 +249,7 @@ export async function GET(request: NextRequest) {
 
                 // Correo
                 const email = lead.email || 'N/A'
-                const emailDisplay = email.length > 30 ? email.substring(0, 27) + '...' : email
+                const emailDisplay = email.length > 50 ? email.substring(0, 50) + '...' : email
                 currentPage.drawText(emailDisplay, {
                     x: xPosition,
                     y: yPosition,
@@ -266,7 +265,7 @@ export async function GET(request: NextRequest) {
                 if (lead.extension) {
                     phoneDisplay += ` ext.${lead.extension}`
                 }
-                phoneDisplay = phoneDisplay.length > 20 ? phoneDisplay.substring(0, 17) + '...' : phoneDisplay
+                phoneDisplay = phoneDisplay.length > 40 ? phoneDisplay.substring(0, 40) + '...' : phoneDisplay
                 currentPage.drawText(phoneDisplay, {
                     x: xPosition,
                     y: yPosition,
@@ -275,33 +274,6 @@ export async function GET(request: NextRequest) {
                     color: rgb(0, 0, 0)
                 })
                 xPosition += columnWidths[3]
-
-                // Estado de evaluación
-                let estado = 'No Apto'
-                if (lead.company.evaluation_status === 'SUITABLE') {
-                    estado = 'Apto'
-                } else if (lead.company.evaluation_status === 'POTENTIAL') {
-                    estado = 'Potencial'
-                }
-                currentPage.drawText(estado, {
-                    x: xPosition,
-                    y: yPosition,
-                    size: 8,
-                    font: font,
-                    color: rgb(0, 0, 0)
-                })
-                xPosition += columnWidths[4]
-
-                // Fecha de registro
-                const date = new Date(lead.created_at)
-                const shortDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
-                currentPage.drawText(shortDate, {
-                    x: xPosition,
-                    y: yPosition,
-                    size: 8,
-                    font: font,
-                    color: rgb(0, 0, 0)
-                })
 
                 yPosition -= lineHeight
 
