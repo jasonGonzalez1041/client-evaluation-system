@@ -9,62 +9,19 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
-import {
-    ChevronLeft,
-    ChevronRight,
-    Download,
-    Filter,
-    Search,
-    ChevronDown,
-    ChevronUp,
     Building,
     Users,
-    FileText,
     Target,
     TrendingUp,
     CheckCircle,
-    Phone,
-    Mail,
-    User,
-    MapPin,
-    Globe,
+
 } from "lucide-react"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+
 import { useForm, useFieldArray } from 'react-hook-form'
 import Image from 'next/image'
 
-// Importa o define los tipos de Prisma aquí
-// Si tienes los tipos generados por Prisma, importa así:
-// import { ContactType, EvaluationStatus } from '@prisma/client'
-
-// Si no, define los enums manualmente basándote en tu schema:
-enum ContactType {
+enum LeadType {
     direcciones = 'direcciones',
     consejo = 'consejo',
     comite = 'comite',
@@ -78,8 +35,8 @@ enum EvaluationStatus {
 }
 
 // Interfaces basadas en tu modelo de Prisma
-interface Contact {
-    contact_type: ContactType
+interface Lead {
+    lead_type: LeadType
     position?: string | null
     name?: string | null
     phone?: string | null
@@ -98,7 +55,7 @@ interface ClientFormData {
     mission?: string | null
     vision?: string | null
     organizational_values?: string | null
-    contacts: Contact[]
+    leads: Lead[]
 
     // Campos de negocio
     niche?: string | null
@@ -184,8 +141,8 @@ function ClientEvaluationForm() {
             mission: null,
             vision: null,
             organizational_values: null,
-            contacts: [{
-                contact_type: ContactType.direcciones,
+            leads: [{
+                lead_type: LeadType.direcciones,
                 position: null,
                 name: null,
                 phone: null,
@@ -227,9 +184,9 @@ function ClientEvaluationForm() {
         }
     })
 
-    const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+    const { fields: leadFields, append: appendlead, remove: removelead } = useFieldArray({
         control,
-        name: 'contacts'
+        name: 'leads'
     })
 
     // Calcular puntuación en tiempo real
@@ -308,18 +265,18 @@ function ClientEvaluationForm() {
                 consequences: data.consequences?.trim() || null,
                 notes: data.notes?.trim() || null,
                 evaluated_by: data.evaluated_by?.trim() || null,
-                contacts: data.contacts.map(contact => ({
-                    ...contact,
-                    position: contact.position?.trim() || null,
-                    name: contact.name?.trim() || null,
-                    phone: contact.phone?.trim() || null,
-                    extension: contact.extension?.trim() || null,
-                    email: contact.email?.trim() || null,
+                leads: data.leads.map(lead => ({
+                    ...lead,
+                    position: lead.position?.trim() || null,
+                    name: lead.name?.trim() || null,
+                    phone: lead.phone?.trim() || null,
+                    extension: lead.extension?.trim() || null,
+                    email: lead.email?.trim() || null,
                 }))
             }
 
             // Llamar a la API
-            const response = await fetch('/api/clients', {
+            const response = await fetch('/api/companies', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -555,30 +512,30 @@ function ClientEvaluationForm() {
                     <div className="space-y-6">
                         <div className="flex items-center space-x-3 mb-6">
                             <Users className="w-6 h-6 text-blue-600" />
-                            <h2 className="text-2xl font-bold text-gray-900">Contactos</h2>
+                            <h2 className="text-2xl font-bold text-gray-900">Leads</h2>
                         </div>
 
                         <div className="bg-blue-50 p-4 rounded-lg mb-6">
                             <p className="text-blue-800">
-                                Agregue los contactos clave de la empresa, incluyendo direcciones, jefaturas y comités.
+                                Agregue los leads clave de la empresa, incluyendo direcciones, jefaturas y comités.
                             </p>
                         </div>
 
-                        {contactFields.map((field, index) => (
+                        {leadFields.map((field, index) => (
                             <div key={field.id} className="border border-gray-200 rounded-lg p-4 mb-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Tipo de Contacto
+                                            Tipo de leado
                                         </label>
                                         <select
-                                            {...register(`contacts.${index}.contact_type` as const)}
+                                            {...register(`leads.${index}.lead_type` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                         >
-                                            <option value={ContactType.direcciones}>Direcciones/Jefaturas</option>
-                                            <option value={ContactType.consejo}>Consejo de Administración</option>
-                                            <option value={ContactType.comite}>Comité</option>
-                                            <option value={ContactType.otros}>Otros</option>
+                                            <option value={LeadType.direcciones}>Direcciones/Jefaturas</option>
+                                            <option value={LeadType.consejo}>Consejo de Administración</option>
+                                            <option value={LeadType.comite}>Comité</option>
+                                            <option value={LeadType.otros}>Otros</option>
                                         </select>
                                     </div>
 
@@ -587,7 +544,7 @@ function ClientEvaluationForm() {
                                             Cargo/Posición
                                         </label>
                                         <input
-                                            {...register(`contacts.${index}.position` as const)}
+                                            {...register(`leads.${index}.position` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="Ej: Gerente General"
                                         />
@@ -600,7 +557,7 @@ function ClientEvaluationForm() {
                                             Nombre
                                         </label>
                                         <input
-                                            {...register(`contacts.${index}.name` as const)}
+                                            {...register(`leads.${index}.name` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="Nombre completo"
                                         />
@@ -611,7 +568,7 @@ function ClientEvaluationForm() {
                                             Teléfono
                                         </label>
                                         <input
-                                            {...register(`contacts.${index}.phone` as const)}
+                                            {...register(`leads.${index}.phone` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="Número de teléfono"
                                         />
@@ -624,7 +581,7 @@ function ClientEvaluationForm() {
                                             Extensión
                                         </label>
                                         <input
-                                            {...register(`contacts.${index}.extension` as const)}
+                                            {...register(`leads.${index}.extension` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="Número de extensión"
                                         />
@@ -636,9 +593,9 @@ function ClientEvaluationForm() {
                                         </label>
                                         <input
                                             type="email"
-                                            {...register(`contacts.${index}.email` as const)}
+                                            {...register(`leads.${index}.email` as const)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                            placeholder="Email del contacto"
+                                            placeholder="Email del leado"
                                         />
                                     </div>
                                 </div>
@@ -646,10 +603,10 @@ function ClientEvaluationForm() {
                                 {index > 0 && (
                                     <button
                                         type="button"
-                                        onClick={() => removeContact(index)}
+                                        onClick={() => removelead(index)}
                                         className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                                     >
-                                        Eliminar Contacto
+                                        Eliminar leado
                                     </button>
                                 )}
                             </div>
@@ -657,8 +614,8 @@ function ClientEvaluationForm() {
 
                         <button
                             type="button"
-                            onClick={() => appendContact({
-                                contact_type: ContactType.direcciones,
+                            onClick={() => appendlead({
+                                lead_type: LeadType.direcciones,
                                 position: null,
                                 name: null,
                                 phone: null,
@@ -667,7 +624,7 @@ function ClientEvaluationForm() {
                             })}
                             className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                         >
-                            + Agregar Contacto
+                            + Agregar leado
                         </button>
                     </div>
                 )
