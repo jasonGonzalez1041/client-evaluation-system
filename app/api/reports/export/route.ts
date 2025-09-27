@@ -3,7 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import { EvaluationStatus, LeadType } from '@prisma/client'
+
+enum EvaluationStatus {
+    SUITABLE,
+    POTENTIAL,
+    NOT_SUITABLE
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -32,18 +37,16 @@ export async function GET(request: NextRequest) {
 
         // Filtro por estado de empresa
         if (companyStatus !== 'all') {
-            if (Object.values(EvaluationStatus).includes(companyStatus as EvaluationStatus)) {
+            if (Object.values(EvaluationStatus).includes(companyStatus)) {
                 where.company = {
-                    evaluation_status: companyStatus as EvaluationStatus
+                    evaluation_status: companyStatus
                 }
             }
         }
 
         // Filtro por tipo de lead
         if (leadType !== 'all') {
-            if (Object.values(LeadType).includes(leadType as LeadType)) {
-                where.lead_type = leadType as LeadType
-            }
+            where.lead_type = leadType
         }
 
         // Obtener todos los leads (sin paginación)
@@ -81,9 +84,6 @@ export async function GET(request: NextRequest) {
                         ...(dateFrom && { gte: new Date(dateFrom) }),
                         ...(dateTo && { lte: new Date(dateTo) })
                     } : undefined,
-                    evaluation_status: companyStatus !== 'all' && Object.values(EvaluationStatus).includes(companyStatus as EvaluationStatus)
-                        ? companyStatus as EvaluationStatus
-                        : undefined
                 },
                 _count: {
                     id: true

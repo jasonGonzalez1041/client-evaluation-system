@@ -1,7 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { EvaluationStatus, LeadType } from '@prisma/client'
+
+interface LeadType {
+    direcciones: "direcciones";
+    consejo: "consejo";
+    comite: "comite";
+    otros: "otros";
+}
+enum EvaluationStatus {
+    SUITABLE,
+    POTENTIAL,
+    NOT_SUITABLE
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -32,19 +43,16 @@ export async function GET(request: NextRequest) {
         // Filtro por estado de empresa - convertir string a enum si es necesario
         if (companyStatus !== 'all') {
             // Verificar que el valor es un EvaluationStatus válido
-            if (Object.values(EvaluationStatus).includes(companyStatus as EvaluationStatus)) {
+            if (Object.values(EvaluationStatus).includes(companyStatus)) {
                 where.company = {
-                    evaluation_status: companyStatus as EvaluationStatus
+                    evaluation_status: companyStatus
                 }
             }
         }
 
         // Filtro por tipo de lead - convertir string a enum si es necesario
         if (leadType !== 'all') {
-            // Verificar que el valor es un LeadType válido
-            if (Object.values(LeadType).includes(leadType as LeadType)) {
-                where.lead_type = leadType as LeadType
-            }
+            where.lead_type = leadType
         }
 
         // Obtener datos para el reporte
@@ -75,9 +83,6 @@ export async function GET(request: NextRequest) {
                         ...(dateFrom && { gte: new Date(dateFrom) }),
                         ...(dateTo && { lte: new Date(dateTo) })
                     } : undefined,
-                    evaluation_status: companyStatus !== 'all' && Object.values(EvaluationStatus).includes(companyStatus as EvaluationStatus)
-                        ? companyStatus as EvaluationStatus
-                        : undefined
                 },
                 select: {
                     id: true,
@@ -113,9 +118,6 @@ export async function GET(request: NextRequest) {
                         ...(dateFrom && { gte: new Date(dateFrom) }),
                         ...(dateTo && { lte: new Date(dateTo) })
                     } : undefined,
-                    evaluation_status: companyStatus !== 'all' && Object.values(EvaluationStatus).includes(companyStatus as EvaluationStatus)
-                        ? companyStatus as EvaluationStatus
-                        : undefined
                 },
                 _count: {
                     id: true

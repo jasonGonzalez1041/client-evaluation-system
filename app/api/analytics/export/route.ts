@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         ])
 
         // Formatear datos para el PDF
-        const formattedLeadsOverTime = leadsOverTime.map(item => ({
+        const formattedLeadsOverTime = leadsOverTime.map((item: { created_at: Date, _count: { id: number } }) => ({
             date: item.created_at.toISOString().split('T')[0],
             count: item._count.id
         }))

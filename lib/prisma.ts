@@ -10,4 +10,4 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 // Exportar los tipos de Prisma
-export type { Client, Contact, Evaluation, ContactType, LeadType, EvaluationStatus } from '@prisma/client'
+export type { AdminUser, Company, Lead, LeadType, EvaluationStatus } from '@prisma/client'
